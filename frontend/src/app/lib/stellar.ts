@@ -28,10 +28,18 @@ let _kitReady = false;
 async function ensureKit(): Promise<typeof import("@creit.tech/stellar-wallets-kit").StellarWalletsKit> {
   const { StellarWalletsKit, Networks: KitNetworks } = await import("@creit.tech/stellar-wallets-kit");
   const { FreighterModule } = await import("@creit.tech/stellar-wallets-kit/modules/freighter");
+  const { xBullModule }     = await import("@creit.tech/stellar-wallets-kit/modules/xbull");
+  const { AlbedoModule }    = await import("@creit.tech/stellar-wallets-kit/modules/albedo");
+  const { LobstrModule }    = await import("@creit.tech/stellar-wallets-kit/modules/lobstr");
 
   if (!_kitReady) {
     StellarWalletsKit.init({
-      modules: [new FreighterModule()],
+      modules: [
+        new FreighterModule(),
+        new xBullModule(),
+        new AlbedoModule(),
+        new LobstrModule(),
+      ],
       network: KitNetworks.TESTNET,
     });
     _kitReady = true;
