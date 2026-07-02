@@ -317,7 +317,7 @@ export async function getOrderCount(walletAddress: string): Promise<number> {
 export interface ChainOrder {
   onChainId:  number;
   trader:     string;
-  commitment: string;    // hex string
+  commitment: string;    // decimal string (same format as local Poseidon output)
   deposit:    bigint;
   matched:    boolean;
   cancelled:  boolean;
@@ -340,12 +340,20 @@ export async function fetchAllOrders(walletAddress: string): Promise<ChainOrder[
       if (!raw) continue;
 
       const commitBytes = raw.commitment as Uint8Array | undefined;
+      // Convert bytes → hex → BigInt decimal string to match the format
+      // produced by the local Poseidon hash (so all consumers can do BigInt(commitment))
+      const commitDecimal = commitBytes
+        ? BigInt(
+            "0x" +
+              Array.from(commitBytes)
+                .map((b) => (b as number).toString(16).padStart(2, "0"))
+                .join("")
+          ).toString()
+        : "0";
       orders.push({
         onChainId:  i,
         trader:     String(raw.trader ?? ""),
-        commitment: commitBytes
-          ? Array.from(commitBytes).map((b) => (b as number).toString(16).padStart(2, "0")).join("")
-          : "",
+        commitment: commitDecimal,
         deposit:   BigInt(String(raw.deposit ?? "0")),
         matched:   Boolean(raw.matched),
         cancelled: Boolean(raw.cancelled),
