@@ -125,6 +125,33 @@ function pubSignalsScVal(signals: string[]): xdr.ScVal {
   );
 }
 
+// ── Account funding (testnet only) ────────────────────────────────────────────
+
+/**
+ * If the account doesn't exist on testnet, fund it via Friendbot.
+ * This is safe to call unconditionally — it no-ops if the account already exists.
+ */
+async function ensureAccountFunded(address: string): Promise<void> {
+  const server = rpc();
+  try {
+    await server.getAccount(address);
+  } catch {
+    // Account not found — fund via Friendbot
+    const res = await fetch(
+      `https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      // Friendbot returns 400 if already funded — safe to ignore
+      if (!body.includes("createAccountAlreadyExist") && res.status !== 400) {
+        throw new Error(`Friendbot failed (${res.status}): ${body.slice(0, 120)}`);
+      }
+    }
+    // Wait for the account to land
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+}
+
 // ── Transaction builder ────────────────────────────────────────────────────────
 
 async function buildSignSubmit(
@@ -133,6 +160,7 @@ async function buildSignSubmit(
   fn: string,
   args: xdr.ScVal[]
 ): Promise<{ hash: string; returnValue: unknown }> {
+  await ensureAccountFunded(walletAddress);
   const server  = rpc();
   const account = await server.getAccount(walletAddress);
   const pool    = new Contract(contractId);
@@ -296,6 +324,7 @@ export interface ChainOrder {
 }
 
 export async function fetchAllOrders(walletAddress: string): Promise<ChainOrder[]> {
+  await ensureAccountFunded(walletAddress);
   const count  = await getOrderCount(walletAddress);
   const orders: ChainOrder[] = [];
 
