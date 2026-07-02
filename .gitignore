@@ -1,0 +1,16 @@
+target/
+node_modules/
+.next/
+dist/
+
+# Sensitive setup files — large ptau ceremony files
+circuits/*.ptau
+circuits/order_match_0000.zkey
+
+# Keep the final zkey and vk (needed for proof generation)
+!keys/order_match_final.zkey
+!keys/verification_key.json
+
+.darkpool-config.json
+.last-proof.json
+*.log
