@@ -4,6 +4,15 @@ A privacy-preserving institutional order matching system built on Stellar using 
 
 > Submitted to **Stellar Hacks: Real-World ZK** (June 2026)
 
+## Live Contracts (Stellar Testnet)
+
+| Contract | Address |
+|---|---|
+| Groth16 Verifier | [`CAV5GOW7YTOOHMD3DWA5VO62A4OPYUN5FZMDEP3UJKNKKXRCVUSSALKF`](https://stellar.expert/explorer/testnet/contract/CAV5GOW7YTOOHMD3DWA5VO62A4OPYUN5FZMDEP3UJKNKKXRCVUSSALKF) |
+| Dark Pool | [`CAEHOELNLBZESU3A543H6SNCEGSOTQC3Z2JJYGD5OZZUG762YE3JNJZA`](https://stellar.expert/explorer/testnet/contract/CAEHOELNLBZESU3A543H6SNCEGSOTQC3Z2JJYGD5OZZUG762YE3JNJZA) |
+
+Initialization TX: [`4cae671e...`](https://stellar.expert/explorer/testnet/tx/4cae671e8054e6d643795123357be0119c0d6cf46cc361bc0dd944b5f96613af)
+
 ---
 
 ## What is this?
