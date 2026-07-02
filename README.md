@@ -8,10 +8,11 @@ A privacy-preserving institutional order matching system built on Stellar using 
 
 | Contract | Address |
 |---|---|
-| Groth16 Verifier | [`CAV5GOW7YTOOHMD3DWA5VO62A4OPYUN5FZMDEP3UJKNKKXRCVUSSALKF`](https://stellar.expert/explorer/testnet/contract/CAV5GOW7YTOOHMD3DWA5VO62A4OPYUN5FZMDEP3UJKNKKXRCVUSSALKF) |
-| Dark Pool | [`CAEHOELNLBZESU3A543H6SNCEGSOTQC3Z2JJYGD5OZZUG762YE3JNJZA`](https://stellar.expert/explorer/testnet/contract/CAEHOELNLBZESU3A543H6SNCEGSOTQC3Z2JJYGD5OZZUG762YE3JNJZA) |
+| Groth16 Verifier | [`CAGMPY2HGLNLLIYYXGRQ7ZJ3QUXPKUXHTEJL2ZZABHVFMGVK7HLIYZSF`](https://stellar.expert/explorer/testnet/contract/CAGMPY2HGLNLLIYYXGRQ7ZJ3QUXPKUXHTEJL2ZZABHVFMGVK7HLIYZSF) |
+| Dark Pool | [`CBSCCHS6HTZWS6YDIU6MOBGGA4654XLIMRI7F3YVPGB2DG3N4WBCMFJF`](https://stellar.expert/explorer/testnet/contract/CBSCCHS6HTZWS6YDIU6MOBGGA4654XLIMRI7F3YVPGB2DG3N4WBCMFJF) |
+| XLM Token (SAC) | [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
 
-Initialization TX: [`4cae671e...`](https://stellar.expert/explorer/testnet/tx/4cae671e8054e6d643795123357be0119c0d6cf46cc361bc0dd944b5f96613af)
+Initialization TX: [`2acbb23d...`](https://stellar.expert/explorer/testnet/tx/2acbb23da50ea76d819b34e7eba3b8c8f629eb6f3d99bfdedd20140f872724f5)
 
 ---
 

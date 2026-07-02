@@ -60,13 +60,14 @@ function g1ToBytes(point) {
 }
 
 function g2ToBytes(point) {
-  // G2Affine: x_im (32B) || x_re (32B) || y_im (32B) || y_re (32B) = 128 bytes
+  // G2Affine: x_re (32B) || x_im (32B) || y_re (32B) || y_im (32B) = 128 bytes
   // snarkjs G2 format: [[x_im, x_re], [y_im, y_re], [1, 0]]
+  // arkworks canonical serialization: c0 (real) first, then c1 (imaginary)
   const x_im = hexPad32(point[0][0]);
   const x_re = hexPad32(point[0][1]);
   const y_im = hexPad32(point[1][0]);
   const y_re = hexPad32(point[1][1]);
-  return Buffer.from(x_im + x_re + y_im + y_re, "hex");
+  return Buffer.from(x_re + x_im + y_re + y_im, "hex");
 }
 
 function g1ToScVal(point) {

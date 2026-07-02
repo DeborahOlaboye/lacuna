@@ -114,13 +114,15 @@ async function generateMatchProof(orderA, orderB, settlement) {
 
   console.log("Proof verified locally ✓");
 
+  // snarkjs publicSignals ordering: outputs first, then public inputs
+  // [nullifierA, nullifierB, commitmentA, commitmentB, settlementPrice, settlementAmount]
   return {
     proof,
     publicSignals,
     commitmentA,
     commitmentB,
-    nullifierA: publicSignals[4],
-    nullifierB: publicSignals[5],
+    nullifierA: publicSignals[0],
+    nullifierB: publicSignals[1],
   };
 }
 
@@ -136,15 +138,16 @@ function g1ToHex(point) {
 
 /**
  * Convert a snarkjs G2 point to 128-byte hex string (Soroban BN254 format).
- * Soroban G2: c1 (32 BE) || c0 (32 BE) || d1 (32 BE) || d0 (32 BE)
+ * Soroban G2 (actual host format): c0 (32 BE) || c1 (32 BE) || d0 (32 BE) || d1 (32 BE)
  * where X = c0 + c1*i  and  Y = d0 + d1*i  (snarkjs: [[c1,c0],[d1,d0]])
+ * i.e., real part first, imaginary part second — matches arkworks canonical serialization.
  */
 function g2ToHex(point) {
-  const c1 = BigInt(point[0][0]).toString(16).padStart(64, "0");
-  const c0 = BigInt(point[0][1]).toString(16).padStart(64, "0");
-  const d1 = BigInt(point[1][0]).toString(16).padStart(64, "0");
-  const d0 = BigInt(point[1][1]).toString(16).padStart(64, "0");
-  return c1 + c0 + d1 + d0;
+  const c1 = BigInt(point[0][0]).toString(16).padStart(64, "0"); // imaginary
+  const c0 = BigInt(point[0][1]).toString(16).padStart(64, "0"); // real
+  const d1 = BigInt(point[1][0]).toString(16).padStart(64, "0"); // imaginary
+  const d0 = BigInt(point[1][1]).toString(16).padStart(64, "0"); // real
+  return c0 + c1 + d0 + d1; // real || imaginary for each coordinate
 }
 
 /**
