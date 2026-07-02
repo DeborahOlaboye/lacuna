@@ -3,11 +3,13 @@
 import { useState } from "react";
 import type { Order, MatchResult } from "../lib/types";
 import { generateMatchProof, accountToField } from "../lib/circuit";
+import { matchOrders as matchOrdersOnChain } from "../lib/stellar";
 import { EclipseMark } from "./Header";
 
 interface MatchPanelProps {
   orders: Order[];
   selectedIds: number[];
+  walletAddress: string;    // connected wallet — used as the matcher address
   onMatchComplete: (result: MatchResult) => void;
   onClose: () => void;
 }
@@ -22,7 +24,7 @@ const CIRCUIT_CHECKS = [
   "Nullifiers derived — no replay possible",
 ];
 
-export default function MatchPanel({ orders, selectedIds, onMatchComplete, onClose }: MatchPanelProps) {
+export default function MatchPanel({ orders, selectedIds, walletAddress, onMatchComplete, onClose }: MatchPanelProps) {
   const [phase, setPhase]               = useState<Phase>("idle");
   const [error, setError]               = useState<string | null>(null);
   const [result, setResult]             = useState<MatchResult | null>(null);
@@ -73,8 +75,18 @@ export default function MatchPanel({ orders, selectedIds, onMatchComplete, onClo
       ]);
 
       setPhase("submitting");
-      // Demo: simulate Stellar tx submission (replace with actual SDK call for production)
-      await new Promise((r) => setTimeout(r, 1500));
+      // Submit the Groth16 proof to the dark pool contract on Stellar testnet
+      const { hash: txHash } = await matchOrdersOnChain(
+        walletAddress,
+        buyOrder.onChainId  ?? buyOrder.id,
+        sellOrder.onChainId ?? sellOrder.id,
+        proofOutput.proof,
+        proofOutput.publicSignals,
+        proofOutput.nullifierA,
+        proofOutput.nullifierB,
+        settlementPrice,
+        settlementAmount
+      );
 
       clearInterval(timer);
       const matchResult: MatchResult = {
@@ -82,7 +94,7 @@ export default function MatchPanel({ orders, selectedIds, onMatchComplete, onClo
         orderIdB:        sellOrder.id,
         settlementPrice,
         settlementAmount,
-        txHash:          proofOutput.nullifierA.slice(0, 20),
+        txHash,
         proofValid:      true,
       };
       setResult(matchResult);
@@ -176,7 +188,8 @@ export default function MatchPanel({ orders, selectedIds, onMatchComplete, onClo
               ["Settlement price", `${(Number(result.settlementPrice) / 1e6).toFixed(6)} XLM`],
               ["Filled", `${(Number(result.settlementAmount) / 1e6).toFixed(2)} XLM`],
               ["Proof time", `${elapsedSec}s`],
-              ["Nullifier stored", "✓ order closed"],
+              ["TX hash", `${result.txHash.slice(0, 10)}…${result.txHash.slice(-8)}`],
+              ["Nullifier stored", "✓ orders closed"],
             ].map(([label, value]) => (
               <div
                 key={label}

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Order, OrderSide } from "../lib/types";
-import { computeCommitment, randomSecret, accountToField } from "../lib/circuit";
+import { computeCommitment, randomSecret } from "../lib/circuit";
+import { submitOrder as submitOrderOnChain } from "../lib/stellar";
 
 interface OrderFormProps {
   walletAddress: string | null;
@@ -13,39 +14,52 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
   const [side, setSide] = useState<OrderSide>("BUY");
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
-  const [status, setStatus] = useState<"idle" | "computing" | "done">("idle");
+  const [status, setStatus]   = useState<"idle" | "computing" | "submitting" | "done" | "error">("idle");
   const [commitment, setCommitment] = useState<string | null>(null);
+  const [txHash, setTxHash]   = useState<string | null>(null);
+  const [errMsg, setErrMsg]   = useState<string | null>(null);
   const [secret] = useState(() => randomSecret());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!walletAddress || !price || !amount) return;
     setStatus("computing");
+    setErrMsg(null);
     try {
       const priceScaled  = BigInt(Math.round(parseFloat(price)  * 1_000_000));
       const amountScaled = BigInt(Math.round(parseFloat(amount) * 1_000_000));
       const sideNum      = side === "BUY" ? 0n : 1n;
+      const deposit      = side === "BUY" ? priceScaled * amountScaled / 1_000_000n : amountScaled;
       const comm         = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
       setCommitment(comm);
 
+      setStatus("submitting");
+      // Submit to dark pool contract on Stellar testnet
+      const { hash, onChainId } = await submitOrderOnChain(walletAddress, comm, deposit);
+      setTxHash(hash);
+
       const order: Order = {
         id: Date.now(),
+        onChainId,
         side,
         commitment: comm,
-        deposit: side === "BUY" ? priceScaled * amountScaled / 1_000_000n : amountScaled,
+        deposit,
         trader: walletAddress,
         matched: false,
         cancelled: false,
+        txHash: hash,
         _price: priceScaled,
         _amount: amountScaled,
         _secret: secret,
       };
       onOrderSubmitted(order);
       setStatus("done");
-      setTimeout(() => setStatus("idle"), 4000);
+      setTimeout(() => { setStatus("idle"); setTxHash(null); }, 8000);
     } catch (err) {
       console.error(err);
-      setStatus("idle");
+      setErrMsg(err instanceof Error ? err.message : "Transaction failed");
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 8000);
     }
   }
 
@@ -210,6 +224,20 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
         </div>
 
         {/* Commitment preview */}
+        {status === "error" && errMsg && (
+          <div
+            style={{
+              background: "rgba(242,109,120,.07)",
+              border: "1px solid rgba(242,109,120,.25)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              font: "400 11.5px/1.55 var(--font-archivo), sans-serif",
+              color: "#F26D78",
+            }}
+          >
+            {errMsg}
+          </div>
+        )}
         {status === "done" && commitment ? (
           <div
             style={{
@@ -225,17 +253,22 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3ECF8E" }} />
               <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#3ECF8E" }}>
-                ORDER COMMITTED
+                ORDER ON-CHAIN
               </span>
             </div>
             <div style={{ font: "500 11px var(--font-mono), monospace", color: "#ECEAF6", wordBreak: "break-all", lineHeight: 1.6 }}>
               0x{BigInt(commitment).toString(16).padStart(64, "0").slice(0, 32)}…
             </div>
+            {txHash && (
+              <div style={{ font: "400 10.5px var(--font-mono), monospace", color: "#9B99AF" }}>
+                TX: {txHash.slice(0, 12)}…{txHash.slice(-8)}
+              </div>
+            )}
             <div style={{ font: "400 11px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
               Price &amp; amount hidden ✓ Only you hold the secret.
             </div>
           </div>
-        ) : (
+        ) : status !== "error" ? (
           <div
             style={{
               background: "rgba(157,140,255,.06)",
@@ -254,27 +287,31 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
               Poseidon(price, amount, side, secret) — computed locally when you submit.
             </span>
           </div>
-        )}
+        ) : null}
 
         <button
           type="submit"
-          disabled={!walletAddress || status === "computing" || status === "done"}
+          disabled={!walletAddress || status === "computing" || status === "submitting" || status === "done"}
           style={{
             font: "600 14.5px var(--font-archivo), sans-serif",
             color: "#08080D",
-            background: status === "done" ? "#3ECF8E" : "#9D8CFF",
+            background: status === "done" ? "#3ECF8E" : status === "error" ? "rgba(157,140,255,.4)" : "#9D8CFF",
             padding: "15px 0",
             borderRadius: 11,
             border: "none",
-            cursor: status !== "idle" ? "default" : "pointer",
+            cursor: (status === "idle" || status === "error") ? "pointer" : "default",
             opacity: !walletAddress ? 0.5 : 1,
             transition: "background .2s",
           }}
         >
           {status === "computing"
             ? "Computing commitment…"
+            : status === "submitting"
+            ? "Submitting to Stellar…"
             : status === "done"
-            ? "Order submitted ✓"
+            ? "Order on-chain ✓"
+            : status === "error"
+            ? "Retry"
             : walletAddress
             ? `Submit commitment${depositEstimate ? ` · deposit ${depositEstimate} XLM` : ""}`
             : "Connect wallet first"}

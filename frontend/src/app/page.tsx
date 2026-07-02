@@ -8,6 +8,7 @@ import OrderForm from "./components/OrderForm";
 import OrderBook from "./components/OrderBook";
 import MatchPanel from "./components/MatchPanel";
 import type { Order, MatchResult } from "./lib/types";
+import { fetchAllOrders, disconnectWallet } from "./lib/stellar";
 
 type View = "landing" | "dashboard" | "match" | "history";
 
@@ -24,13 +25,33 @@ export default function Home() {
     setShowModal(true);
   }
 
-  function handleConnected(addr: string) {
+  // On wallet connect, pull existing on-chain orders so the book is populated
+  async function handleConnected(addr: string) {
     setWalletAddress(addr);
     setShowModal(false);
     setView("dashboard");
+    try {
+      const chainOrders = await fetchAllOrders(addr);
+      if (chainOrders.length > 0) {
+        const hydrated: Order[] = chainOrders.map((co) => ({
+          id: Date.now() + co.onChainId,
+          onChainId: co.onChainId,
+          side: "BUY",          // side is hidden on-chain; unknown unless it's our order
+          commitment: co.commitment,
+          deposit: co.deposit,
+          trader: co.trader,
+          matched: co.matched,
+          cancelled: co.cancelled,
+        }));
+        setOrders(hydrated);
+      }
+    } catch {
+      // Non-fatal: user may have no orders, or demo address has no account
+    }
   }
 
-  function handleDisconnect() {
+  async function handleDisconnect() {
+    try { await disconnectWallet(); } catch { /* ignore */ }
     setWalletAddress(null);
     setView("landing");
     setOrders([]);
@@ -95,6 +116,7 @@ export default function Home() {
             <MatchPanel
               orders={orders}
               selectedIds={selectedIds}
+              walletAddress={walletAddress ?? ""}
               onMatchComplete={handleMatchComplete}
               onClose={handleMatchClose}
             />

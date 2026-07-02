@@ -1,13 +1,15 @@
 export type OrderSide = "BUY" | "SELL";
 
 export interface Order {
-  id: number;
+  id: number;               // local timestamp-based ID
+  onChainId?: number;       // order_id returned by submit_order
   side: OrderSide;
   commitment: string;       // on-chain hash — only thing visible publicly
   deposit: bigint;
   trader: string;           // Stellar address
   matched: boolean;
   cancelled: boolean;
+  txHash?: string;          // submit_order tx hash
   // Private fields — only the order creator holds these
   _price?: bigint;
   _amount?: bigint;
