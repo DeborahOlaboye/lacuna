@@ -6,126 +6,292 @@ interface OrderBookProps {
   orders: Order[];
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
+  onMatchClick: () => void;
 }
 
 function StatusBadge({ order }: { order: Order }) {
-  if (order.matched)   return <span className="px-2 py-0.5 rounded-full text-xs bg-violet-500/15 text-violet-400 border border-violet-500/25">Matched</span>;
-  if (order.cancelled) return <span className="px-2 py-0.5 rounded-full text-xs bg-slate-700/50 text-slate-500 border border-slate-700">Cancelled</span>;
-  return <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Open</span>;
+  if (order.matched)
+    return (
+      <span
+        style={{
+          font: "500 10px var(--font-mono), monospace",
+          color: "#3ECF8E",
+          background: "rgba(62,207,142,.1)",
+          padding: "4px 9px",
+          borderRadius: 20,
+        }}
+      >
+        MATCHED
+      </span>
+    );
+  if (order.cancelled)
+    return (
+      <span
+        style={{
+          font: "500 10px var(--font-mono), monospace",
+          color: "#F26D78",
+          background: "rgba(242,109,120,.1)",
+          padding: "4px 9px",
+          borderRadius: 20,
+        }}
+      >
+        CANCELLED
+      </span>
+    );
+  return (
+    <span
+      style={{
+        font: "500 10px var(--font-mono), monospace",
+        color: "#9D8CFF",
+        background: "rgba(157,140,255,.12)",
+        padding: "4px 9px",
+        borderRadius: 20,
+      }}
+    >
+      OPEN
+    </span>
+  );
 }
 
-export default function OrderBook({ orders, selectedIds, onToggleSelect }: OrderBookProps) {
-  const open = orders.filter((o) => !o.matched && !o.cancelled);
-  const closed = orders.filter((o) => o.matched || o.cancelled);
+function RedactBar({ w = 44 }: { w?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: w,
+        height: 10,
+        borderRadius: 2,
+        background: "repeating-linear-gradient(45deg, rgba(157,140,255,.3) 0 3px, rgba(157,140,255,.1) 3px 6px)",
+      }}
+    />
+  );
+}
 
-  if (orders.length === 0) {
-    return (
-      <div className="rounded-xl border border-[#1a1a2e] bg-[#0f0f1a] p-6">
-        <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">
-          Order Book
-        </h2>
-        <div className="text-center py-12 text-slate-600">
-          <p className="text-2xl mb-2">—</p>
-          <p className="text-sm">No orders yet. Submit a BUY or SELL order.</p>
-        </div>
-      </div>
-    );
-  }
+const COL = "52px 1.5fr 1.2fr .9fr .8fr .9fr .6fr .9fr 48px";
+
+export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatchClick }: OrderBookProps) {
+  const open    = orders.filter((o) => !o.matched && !o.cancelled);
+  const matched = orders.filter((o) => o.matched);
+  const cancelled = orders.filter((o) => o.cancelled);
+
+  const canMatch = selectedIds.length === 2;
 
   return (
-    <div className="rounded-xl border border-[#1a1a2e] bg-[#0f0f1a] p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest">
-          Order Book
-        </h2>
-        <span className="text-xs text-slate-500 bg-[#0a0a14] border border-[#1a1a2e] px-2 py-1 rounded-md">
-          {open.length} open · {closed.length} closed
-        </span>
+    <div
+      style={{
+        background: "#0C0C14",
+        border: "1px solid rgba(255,255,255,.07)",
+        borderRadius: 12,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        flex: 1,
+      }}
+    >
+      {/* Book header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "18px 22px",
+          borderBottom: "1px solid rgba(255,255,255,.07)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+          <span style={{ font: "600 15px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>Order book</span>
+          <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+            commitments only — terms never touch the chain
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <span style={{ font: "500 10.5px var(--font-mono), monospace", color: "#9D8CFF", background: "rgba(157,140,255,.1)", padding: "5px 10px", borderRadius: 20 }}>
+            {open.length} OPEN
+          </span>
+          {matched.length > 0 && (
+            <span style={{ font: "500 10.5px var(--font-mono), monospace", color: "#3ECF8E", background: "rgba(62,207,142,.1)", padding: "5px 10px", borderRadius: 20 }}>
+              {matched.length} MATCHED
+            </span>
+          )}
+          {cancelled.length > 0 && (
+            <span style={{ font: "500 10.5px var(--font-mono), monospace", color: "#5D5B6E", background: "rgba(255,255,255,.06)", padding: "5px 10px", borderRadius: 20 }}>
+              {cancelled.length} CANCELLED
+            </span>
+          )}
+        </div>
       </div>
 
-      <p className="text-xs text-slate-600 mb-4">
-        Price and amount are hidden. Only Poseidon commitment hashes are visible on-chain.
-        Select two open orders to generate a match proof.
-      </p>
+      {/* Column headers */}
+      {orders.length > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: COL,
+            gap: 8,
+            alignItems: "center",
+            padding: "12px 22px",
+            font: "500 10px var(--font-mono), monospace",
+            letterSpacing: "0.12em",
+            color: "#5D5B6E",
+            borderBottom: "1px solid rgba(255,255,255,.07)",
+          }}
+        >
+          <span>ID</span>
+          <span>COMMITMENT</span>
+          <span>TRADER</span>
+          <span>DEPOSIT</span>
+          <span style={{ color: "#9D8CFF" }}>SIDE·ZK</span>
+          <span style={{ color: "#9D8CFF" }}>PRICE·ZK</span>
+          <span>AGE</span>
+          <span>STATUS</span>
+          <span>SEL</span>
+        </div>
+      )}
 
-      <div className="space-y-2">
-        {orders.map((order) => {
-          const isSelected = selectedIds.includes(order.id);
-          const isSelectable = !order.matched && !order.cancelled;
+      {/* Rows */}
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        {orders.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 240, gap: 12 }}>
+            <span style={{ font: "400 36px var(--font-serif), Georgia, serif", color: "#5D5B6E" }}>—</span>
+            <p style={{ font: "400 13px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+              No orders yet. Submit a hidden order using the form.
+            </p>
+          </div>
+        ) : (
+          orders.map((order, idx) => {
+            const isSelected  = selectedIds.includes(order.id);
+            const isSelectable = !order.matched && !order.cancelled;
+            const orderId     = String(idx + 1).padStart(2, "0");
+            const commitHex   = "0x" + BigInt(order.commitment).toString(16).padStart(64, "0");
+            const shortCommit = commitHex.slice(0, 8) + "…" + commitHex.slice(-4);
+            const shortTrader = order.trader.slice(0, 4) + "…" + order.trader.slice(-4);
+            const depositXlm  = (Number(order.deposit) / 1_000_000).toFixed(2);
+            const ageMin      = Math.floor((Date.now() - order.id) / 60000);
+            const ageLabel    = ageMin < 1 ? "just now" : ageMin + "m";
 
-          return (
-            <div
-              key={order.id}
-              onClick={() => isSelectable && onToggleSelect(order.id)}
-              className={`rounded-lg border px-4 py-3 transition-all ${
-                isSelectable ? "cursor-pointer" : "cursor-default opacity-60"
-              } ${
-                isSelected
-                  ? "border-violet-500/50 bg-violet-500/10"
-                  : isSelectable
-                  ? "border-[#1a1a2e] bg-[#0a0a14] hover:border-slate-600"
-                  : "border-[#1a1a2e] bg-[#080810]"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {isSelectable && (
-                    <div
-                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected
-                          ? "border-violet-500 bg-violet-500"
-                          : "border-slate-600"
-                      }`}
+            return (
+              <div
+                key={order.id}
+                onClick={() => isSelectable && onToggleSelect(order.id)}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: COL,
+                  gap: 8,
+                  alignItems: "center",
+                  padding: "0 22px",
+                  height: 47,
+                  borderBottom: "1px solid rgba(255,255,255,.04)",
+                  cursor: isSelectable ? "pointer" : "default",
+                  opacity: !isSelectable ? 0.6 : 1,
+                  background: isSelected ? "rgba(157,140,255,.07)" : "transparent",
+                  boxShadow: isSelected ? "inset 3px 0 0 #9D8CFF" : "none",
+                  transition: "background .15s",
+                }}
+              >
+                <span style={{ font: "500 12px var(--font-mono), monospace", color: "#5D5B6E" }}>#{orderId}</span>
+                <span style={{ font: "500 12.5px var(--font-mono), monospace", color: isSelected ? "#9D8CFF" : "#ECEAF6" }}>
+                  {shortCommit}
+                </span>
+                <span style={{ font: "500 12px var(--font-mono), monospace", color: "#9B99AF" }}>{shortTrader}</span>
+                <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>{depositXlm}</span>
+                {/* Side — redacted */}
+                <span><RedactBar w={28} /></span>
+                {/* Price — redacted (unless it's your own order, but we show redacted to simulate chain view) */}
+                <span><RedactBar w={44} /></span>
+                <span style={{ font: "500 12px var(--font-mono), monospace", color: "#9B99AF" }}>{ageLabel}</span>
+                <span><StatusBadge order={order} /></span>
+                <span>
+                  {isSelectable ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: 17,
+                        height: 17,
+                        borderRadius: 5,
+                        background: isSelected ? "#9D8CFF" : "transparent",
+                        border: isSelected ? "none" : "1.5px solid rgba(255,255,255,.2)",
+                        color: "#08080D",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        font: "700 11px var(--font-archivo), sans-serif",
+                      }}
                     >
-                      {isSelected && <span className="text-white text-xs">✓</span>}
-                    </div>
-                  )}
-
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                      order.side === "BUY"
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-                        : "bg-red-500/10 text-red-400 border-red-500/25"
-                    }`}
-                  >
-                    {order.side}
-                  </span>
-
-                  <span className="font-mono text-xs text-slate-500">
-                    #{String(order.id).slice(-4)}
-                  </span>
-                </div>
-
-                <StatusBadge order={order} />
+                      {isSelected ? "✓" : ""}
+                    </span>
+                  ) : null}
+                </span>
               </div>
+            );
+          })
+        )}
+      </div>
 
-              <div className="mt-2 ml-7 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600 w-20">Commitment</span>
-                  <span className="font-mono text-xs text-slate-500">
-                    {order.commitment.slice(0, 18)}...
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600 w-20">Price</span>
-                  <span className="text-xs text-slate-600 italic">
-                    {order._price
-                      ? `$${(Number(order._price) / 1e6).toFixed(6)} (private)`
-                      : "hidden"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600 w-20">Amount</span>
-                  <span className="text-xs text-slate-600 italic">
-                    {order._amount
-                      ? `${(Number(order._amount) / 1e6).toFixed(2)} USDC (private)`
-                      : "hidden"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* Action bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 22px",
+          borderTop: canMatch
+            ? "1px solid rgba(157,140,255,.25)"
+            : "1px solid rgba(255,255,255,.07)",
+          background: canMatch ? "rgba(157,140,255,.06)" : "transparent",
+          transition: "all .2s",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {canMatch ? (
+            <>
+              <span style={{ font: "600 13px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>
+                2 commitments selected
+              </span>
+              <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#9B99AF" }}>
+                compatibility is proven, never revealed
+              </span>
+            </>
+          ) : (
+            <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+              {orders.length === 0
+                ? "Submit orders to start matching"
+                : `Select 2 open orders to generate a proof (${selectedIds.length}/2)`}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {canMatch && (
+            <button
+              onClick={() => selectedIds.length === 2 && onToggleSelect(selectedIds[0])}
+              style={{
+                font: "600 12.5px var(--font-archivo), sans-serif",
+                color: "#9B99AF",
+                padding: "10px 16px",
+                border: "1px solid rgba(255,255,255,.12)",
+                borderRadius: 8,
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              Clear
+            </button>
+          )}
+          <button
+            disabled={!canMatch}
+            onClick={onMatchClick}
+            style={{
+              font: "600 12.5px var(--font-archivo), sans-serif",
+              color: canMatch ? "#08080D" : "#5D5B6E",
+              background: canMatch ? "#9D8CFF" : "rgba(255,255,255,.06)",
+              padding: "10px 20px",
+              borderRadius: 8,
+              border: "none",
+              cursor: canMatch ? "pointer" : "default",
+              transition: "all .2s",
+            }}
+          >
+            Generate proof &amp; match →
+          </button>
+        </div>
       </div>
     </div>
   );

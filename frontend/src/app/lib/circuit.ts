@@ -79,12 +79,13 @@ export async function generateMatchProof(
 
   const { proof, publicSignals } = await groth16.fullProve(input, WASM_PATH, ZKEY_PATH);
 
+  // snarkjs outputs come first: [nullifierA, nullifierB, commitmentA, commitmentB, settlementPrice, settlementAmount]
   return {
     proof,
     publicSignals,
     commitmentA,
     commitmentB,
-    nullifierA: publicSignals[4],
-    nullifierB: publicSignals[5],
+    nullifierA: publicSignals[0],
+    nullifierB: publicSignals[1],
   };
 }

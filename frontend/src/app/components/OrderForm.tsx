@@ -14,29 +14,25 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
   const [price, setPrice] = useState("");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<"idle" | "computing" | "done">("idle");
-  const [lastOrder, setLastOrder] = useState<Order | null>(null);
+  const [commitment, setCommitment] = useState<string | null>(null);
+  const [secret] = useState(() => randomSecret());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!walletAddress) return;
-
+    if (!walletAddress || !price || !amount) return;
     setStatus("computing");
     try {
-      const priceScaled  = BigInt(Math.round(parseFloat(price) * 1_000_000));
+      const priceScaled  = BigInt(Math.round(parseFloat(price)  * 1_000_000));
       const amountScaled = BigInt(Math.round(parseFloat(amount) * 1_000_000));
-      const secret       = randomSecret();
-      const traderHash   = await accountToField(walletAddress);
       const sideNum      = side === "BUY" ? 0n : 1n;
-
-      const commitment = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
+      const comm         = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
+      setCommitment(comm);
 
       const order: Order = {
         id: Date.now(),
         side,
-        commitment,
-        deposit: side === "BUY"
-          ? priceScaled * amountScaled / 1_000_000n
-          : amountScaled,
+        commitment: comm,
+        deposit: side === "BUY" ? priceScaled * amountScaled / 1_000_000n : amountScaled,
         trader: walletAddress,
         matched: false,
         cancelled: false,
@@ -44,120 +40,250 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
         _amount: amountScaled,
         _secret: secret,
       };
-
-      setLastOrder(order);
       onOrderSubmitted(order);
       setStatus("done");
-      setPrice("");
-      setAmount("");
-      setTimeout(() => setStatus("idle"), 3000);
+      setTimeout(() => setStatus("idle"), 4000);
     } catch (err) {
       console.error(err);
       setStatus("idle");
     }
   }
 
+  const depositEstimate =
+    price && amount
+      ? side === "BUY"
+        ? (parseFloat(price) * parseFloat(amount)).toFixed(2)
+        : parseFloat(amount).toFixed(2)
+      : null;
+
   return (
-    <div className="rounded-xl border border-[#1a1a2e] bg-[#0f0f1a] p-6">
-      <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">
-        Submit Order
-      </h2>
+    <div
+      style={{
+        background: "#0C0C14",
+        border: "1px solid rgba(255,255,255,.07)",
+        borderRadius: 12,
+        padding: "20px 22px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ font: "600 15px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>
+          New hidden order
+        </span>
+        <span
+          style={{
+            font: "500 9.5px var(--font-mono), monospace",
+            letterSpacing: "0.1em",
+            color: "#9D8CFF",
+            background: "rgba(157,140,255,.1)",
+            padding: "4px 9px",
+            borderRadius: 20,
+          }}
+        >
+          HASHED LOCALLY
+        </span>
+      </div>
 
       {/* Side toggle */}
-      <div className="grid grid-cols-2 gap-2 mb-5">
+      <div style={{ display: "flex", background: "#12121D", borderRadius: 10, padding: 3 }}>
         {(["BUY", "SELL"] as OrderSide[]).map((s) => (
           <button
             key={s}
             onClick={() => setSide(s)}
-            className={`py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-              side === s
-                ? s === "BUY"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "bg-red-500/20 text-red-400 border border-red-500/40"
-                : "bg-transparent text-slate-500 border border-[#1a1a2e] hover:border-slate-600"
-            }`}
+            style={{
+              flex: 1,
+              textAlign: "center",
+              font: "600 13.5px var(--font-archivo), sans-serif",
+              color:
+                side === s
+                  ? s === "BUY"
+                    ? "#08080D"
+                    : "#08080D"
+                  : "#9B99AF",
+              background:
+                side === s
+                  ? s === "BUY"
+                    ? "#3ECF8E"
+                    : "#F26D78"
+                  : "transparent",
+              borderRadius: 8,
+              padding: "11px 0",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
             {s}
           </button>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Price */}
         <div>
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-            Limit Price (USDC)
-          </label>
-          <input
-            type="number"
-            step="0.000001"
-            min="0"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="1.005000"
-            required
-            className="w-full bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
-          />
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+            <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#5D5B6E" }}>
+              LIMIT PRICE
+            </span>
+            <span style={{ font: "400 10.5px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+              {side === "BUY" ? "max you'll pay" : "min you'll accept"}
+            </span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#0A0A12",
+              border: price ? "1px solid #9D8CFF" : "1px solid rgba(255,255,255,.1)",
+              borderRadius: 10,
+              padding: "14px 16px",
+              boxShadow: price ? "0 0 0 3px rgba(157,140,255,.12)" : "none",
+            }}
+          >
+            <input
+              type="number"
+              step="0.000001"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="1.0100"
+              required
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                font: "500 18px var(--font-mono), monospace",
+                color: "#ECEAF6",
+                width: "100%",
+              }}
+            />
+            <span style={{ font: "500 11px var(--font-archivo), sans-serif", color: "#5D5B6E", flexShrink: 0 }}>XLM</span>
+          </div>
         </div>
 
+        {/* Amount */}
         <div>
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-            Amount (USDC)
-          </label>
-          <input
-            type="number"
-            step="0.000001"
-            min="0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="300.000000"
-            required
-            className="w-full bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
-          />
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+            <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#5D5B6E" }}>AMOUNT</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#0A0A12",
+              border: "1px solid rgba(255,255,255,.1)",
+              borderRadius: 10,
+              padding: "14px 16px",
+            }}
+          >
+            <input
+              type="number"
+              step="0.000001"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="300"
+              required
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                font: "500 18px var(--font-mono), monospace",
+                color: "#ECEAF6",
+                width: "100%",
+              }}
+            />
+            <span style={{ font: "500 11px var(--font-archivo), sans-serif", color: "#5D5B6E", flexShrink: 0 }}>XLM</span>
+          </div>
         </div>
 
-        <div className="rounded-lg bg-[#0a0a14] border border-[#1a1a2e] px-4 py-3 text-xs text-slate-500 space-y-1">
-          <div className="flex justify-between">
-            <span>Secret (auto-generated)</span>
-            <span className="text-violet-400 font-mono">randomized</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Commitment</span>
-            <span className="text-violet-400 font-mono">Poseidon(price, amount, side, secret)</span>
-          </div>
-          <div className="flex justify-between">
-            <span>On-chain visible</span>
-            <span className="text-emerald-400">commitment hash only</span>
-          </div>
+        {/* Secret */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px" }}>
+          <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#5D5B6E" }}>SECRET</span>
+          <span style={{ font: "500 11.5px var(--font-mono), monospace", color: "#9B99AF" }}>
+            0x{secret.toString(16).slice(0, 6)}…generated locally
+          </span>
         </div>
+
+        {/* Commitment preview */}
+        {status === "done" && commitment ? (
+          <div
+            style={{
+              background: "rgba(62,207,142,.05)",
+              border: "1px solid rgba(62,207,142,.25)",
+              borderRadius: 12,
+              padding: 16,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3ECF8E" }} />
+              <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#3ECF8E" }}>
+                ORDER COMMITTED
+              </span>
+            </div>
+            <div style={{ font: "500 11px var(--font-mono), monospace", color: "#ECEAF6", wordBreak: "break-all", lineHeight: 1.6 }}>
+              0x{BigInt(commitment).toString(16).padStart(64, "0").slice(0, 32)}…
+            </div>
+            <div style={{ font: "400 11px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
+              Price &amp; amount hidden ✓ Only you hold the secret.
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              background: "rgba(157,140,255,.06)",
+              border: "1px solid rgba(157,140,255,.22)",
+              borderRadius: 12,
+              padding: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#9D8CFF" }}>
+              YOUR COMMITMENT — THE ONLY THING THE CHAIN WILL SEE
+            </span>
+            <span style={{ font: "400 11px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
+              Poseidon(price, amount, side, secret) — computed locally when you submit.
+            </span>
+          </div>
+        )}
 
         <button
           type="submit"
-          disabled={!walletAddress || status === "computing"}
-          className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            side === "BUY"
-              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30"
-              : "bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-          }`}
+          disabled={!walletAddress || status === "computing" || status === "done"}
+          style={{
+            font: "600 14.5px var(--font-archivo), sans-serif",
+            color: "#08080D",
+            background: status === "done" ? "#3ECF8E" : "#9D8CFF",
+            padding: "15px 0",
+            borderRadius: 11,
+            border: "none",
+            cursor: status !== "idle" ? "default" : "pointer",
+            opacity: !walletAddress ? 0.5 : 1,
+            transition: "background .2s",
+          }}
         >
           {status === "computing"
-            ? "Computing commitment..."
+            ? "Computing commitment…"
             : status === "done"
             ? "Order submitted ✓"
             : walletAddress
-            ? `Submit ${side} Order`
+            ? `Submit commitment${depositEstimate ? ` · deposit ${depositEstimate} XLM` : ""}`
             : "Connect wallet first"}
         </button>
-      </form>
 
-      {lastOrder && status === "done" && (
-        <div className="mt-4 rounded-lg bg-violet-500/10 border border-violet-500/20 p-3 text-xs space-y-1">
-          <p className="text-violet-300 font-semibold">Order committed on-chain:</p>
-          <p className="font-mono text-slate-400 break-all">
-            {lastOrder.commitment.slice(0, 40)}...
-          </p>
-          <p className="text-slate-500">Price & amount hidden ✓ Only you hold the secret.</p>
-        </div>
-      )}
+        <p style={{ font: "400 11px/1.6 var(--font-archivo), sans-serif", color: "#5D5B6E", margin: 0 }}>
+          Price &amp; amount never leave this device. Keep your secret — you&rsquo;ll need it to match or cancel.
+        </p>
+      </form>
     </div>
   );
 }

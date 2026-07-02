@@ -1,19 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #07070f;
-  --panel: #0f0f1a;
-  --border: #1a1a2e;
-  --accent: #7c3aed;
-  --green: #10b981;
-  --red: #ef4444;
-  --yellow: #f59e0b;
-  --text: #e2e8f0;
-  --muted: #4a5568;
+@theme {
+  --color-void: #08080d;
+  --color-surface: #12121d;
+  --color-surface-alt: #0c0c14;
+  --color-ink: #eceaf6;
+  --color-muted: #9b99af;
+  --color-dim: #5d5b6e;
+  --color-dimmer: #44424f;
+  --color-violet: #9d8cff;
+  --color-settled: #3ecf8e;
+  --color-cancel: #f26d78;
+
+  --font-family-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-family-serif: var(--font-serif), Georgia, serif;
+  --font-family-mono: var(--font-mono), monospace;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: #08080d;
+  color: #eceaf6;
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+
+.redact {
+  display: inline-block;
+  height: 11px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(157, 140, 255, 0.3) 0 3px,
+    rgba(157, 140, 255, 0.1) 3px 6px
+  );
+}
+
+.redact-sm {
+  height: 9px;
+}
+
+.eclipse-mark {
+  flex-shrink: 0;
 }

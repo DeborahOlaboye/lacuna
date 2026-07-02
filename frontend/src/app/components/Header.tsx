@@ -3,42 +3,143 @@
 interface HeaderProps {
   walletAddress: string | null;
   onConnect: () => void;
+  activeTab?: "book" | "history";
+  onTabChange?: (tab: "book" | "history") => void;
 }
 
-export default function Header({ walletAddress, onConnect }: HeaderProps) {
+export function EclipseMark({ size = 24, color = "#9D8CFF", id = "hdr" }: { size?: number; color?: string; id?: string }) {
   return (
-    <header className="border-b border-[#1a1a2e] bg-[#0a0a14] px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-sm font-bold">
-            ZK
+    <svg width={size} height={size} viewBox="0 0 48 48" className="eclipse-mark flex-shrink-0">
+      <mask id={`em-${id}`}>
+        <rect width="48" height="48" fill="#fff" />
+        <circle cx="31.5" cy="16.5" r="9.5" fill="#000" />
+      </mask>
+      <circle cx="24" cy="24" r="19" fill={color} mask={`url(#em-${id})`} />
+    </svg>
+  );
+}
+
+export function Wordmark({ size = 14 }: { size?: number }) {
+  return (
+    <span
+      style={{
+        font: `700 ${size}px var(--font-archivo), sans-serif`,
+        letterSpacing: "0.2em",
+        color: "#ECEAF6",
+      }}
+    >
+      LAC
+      <span style={{ color: "transparent", WebkitTextStroke: "1.2px #9D8CFF" }}>U</span>
+      NA
+    </span>
+  );
+}
+
+export default function Header({ walletAddress, onConnect, activeTab = "book", onTabChange }: HeaderProps) {
+  return (
+    <header
+      style={{
+        borderBottom: "1px solid rgba(255,255,255,.07)",
+        background: "#08080D",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 24px",
+          height: 60,
+        }}
+      >
+        {/* Left: logo + pair selector + tabs */}
+        <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <EclipseMark size={24} id="hdr-main" />
+            <Wordmark size={14} />
           </div>
-          <div>
-            <h1 className="text-base font-bold text-white tracking-tight">
-              Lacuna
-            </h1>
-            <p className="text-xs text-slate-500">Stellar Testnet · Zero-Knowledge Dark Pool</p>
-          </div>
+
+          {walletAddress && (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#12121D",
+                  border: "1px solid rgba(255,255,255,.1)",
+                  borderRadius: 9,
+                  padding: "8px 14px",
+                }}
+              >
+                <span style={{ font: "600 13px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                  XLM
+                </span>
+              </div>
+
+              <nav style={{ display: "flex", gap: 22 }}>
+                {(["book", "history"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => onTabChange?.(tab)}
+                    style={{
+                      font: "500 13px var(--font-archivo), sans-serif",
+                      color: activeTab === tab ? "#ECEAF6" : "#5D5B6E",
+                      background: "none",
+                      border: "none",
+                      borderBottom: activeTab === tab ? "2px solid #9D8CFF" : "2px solid transparent",
+                      paddingBottom: 19,
+                      marginBottom: -21,
+                      cursor: "pointer",
+                      textTransform: "capitalize" as const,
+                    }}
+                  >
+                    {tab === "book" ? "Book" : "History"}
+                  </button>
+                ))}
+              </nav>
+            </>
+          )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            BN254 · Groth16 · Poseidon
-          </div>
-          <button
-            onClick={onConnect}
-            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
-            style={{
-              background: walletAddress ? "rgba(16,185,129,0.15)" : "rgba(124,58,237,0.2)",
-              color: walletAddress ? "#10b981" : "#a78bfa",
-              border: `1px solid ${walletAddress ? "rgba(16,185,129,0.3)" : "rgba(124,58,237,0.4)"}`,
-            }}
-          >
-            {walletAddress
-              ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-              : "Connect Wallet"}
-          </button>
+        {/* Right: wallet */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {walletAddress ? (
+            <button
+              onClick={onConnect}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                background: "#12121D",
+                border: "1px solid rgba(255,255,255,.1)",
+                borderRadius: 9,
+                padding: "8px 14px",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3ECF8E", flexShrink: 0 }} />
+              <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
+              </span>
+              <span style={{ font: "400 10px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>▾</span>
+            </button>
+          ) : (
+            <button
+              onClick={onConnect}
+              style={{
+                font: "600 13px var(--font-archivo), sans-serif",
+                color: "#08080D",
+                background: "#9D8CFF",
+                padding: "9px 20px",
+                borderRadius: 8,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Connect wallet
+            </button>
+          )}
         </div>
       </div>
     </header>

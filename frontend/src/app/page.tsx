@@ -2,28 +2,40 @@
 
 import { useState } from "react";
 import Header from "./components/Header";
+import LandingPage from "./components/LandingPage";
+import WalletModal from "./components/WalletModal";
 import OrderForm from "./components/OrderForm";
 import OrderBook from "./components/OrderBook";
 import MatchPanel from "./components/MatchPanel";
 import type { Order, MatchResult } from "./lib/types";
 
-export default function Home() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [matchHistory, setMatchHistory] = useState<MatchResult[]>([]);
+type View = "landing" | "dashboard" | "match" | "history";
 
-  function connectWallet() {
-    // Demo: generate a random-looking Stellar address for the hackathon demo
-    // In production: integrate Freighter or WalletConnect
-    if (walletAddress) {
-      setWalletAddress(null);
-      return;
-    }
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    let addr = "G";
-    for (let i = 0; i < 55; i++) addr += chars[Math.floor(Math.random() * chars.length)];
+export default function Home() {
+  const [walletAddress, setWalletAddress]   = useState<string | null>(null);
+  const [showModal, setShowModal]           = useState(false);
+  const [view, setView]                     = useState<View>("landing");
+  const [activeTab, setActiveTab]           = useState<"book" | "history">("book");
+  const [orders, setOrders]                 = useState<Order[]>([]);
+  const [selectedIds, setSelectedIds]       = useState<number[]>([]);
+  const [matchHistory, setMatchHistory]     = useState<MatchResult[]>([]);
+
+  function openWalletModal() {
+    setShowModal(true);
+  }
+
+  function handleConnected(addr: string) {
     setWalletAddress(addr);
+    setShowModal(false);
+    setView("dashboard");
+  }
+
+  function handleDisconnect() {
+    setWalletAddress(null);
+    setView("landing");
+    setOrders([]);
+    setSelectedIds([]);
+    setMatchHistory([]);
   }
 
   function handleOrderSubmitted(order: Order) {
@@ -42,141 +54,434 @@ export default function Home() {
     setMatchHistory((prev) => [result, ...prev]);
     setOrders((prev) =>
       prev.map((o) =>
-        o.id === result.orderIdA || o.id === result.orderIdB
-          ? { ...o, matched: true }
-          : o
+        o.id === result.orderIdA || o.id === result.orderIdB ? { ...o, matched: true } : o
       )
     );
-    setSelectedIds([]);
+    // stay on match panel to show success
   }
 
-  const totalMatched  = matchHistory.length;
-  const totalVolume   = matchHistory.reduce((s, m) => s + Number(m.settlementAmount) / 1e6, 0);
-  const openOrders    = orders.filter((o) => !o.matched && !o.cancelled).length;
+  function handleMatchClose() {
+    setSelectedIds([]);
+    setView("dashboard");
+  }
+
+  // Landing
+  if (view === "landing") {
+    return (
+      <>
+        <LandingPage onConnect={openWalletModal} />
+        {showModal && <WalletModal onConnect={handleConnected} onClose={() => setShowModal(false)} />}
+      </>
+    );
+  }
+
+  // Match & prove view
+  if (view === "match") {
+    const orderA = orders.find((o) => o.id === selectedIds[0]);
+    const orderB = orders.find((o) => o.id === selectedIds[1]);
+    const buy    = orderA?.side === "BUY" ? orderA : orderB;
+    const sell   = orderA?.side === "SELL" ? orderA : orderB;
+
+    return (
+      <div style={{ background: "#08080D", minHeight: "100vh" }}>
+        <Header
+          walletAddress={walletAddress}
+          onConnect={handleDisconnect}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 24px" }}>
+          {buy && sell ? (
+            <MatchPanel
+              orders={orders}
+              selectedIds={selectedIds}
+              onMatchComplete={handleMatchComplete}
+              onClose={handleMatchClose}
+            />
+          ) : (
+            <div style={{ color: "#9B99AF", padding: 40 }}>No orders selected.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Dashboard — order book + sidebar
+  const myOrders = orders.filter((o) => o.trader === walletAddress);
 
   return (
-    <div className="min-h-screen bg-[#07070f]">
-      <Header walletAddress={walletAddress} onConnect={connectWallet} />
+    <div style={{ background: "#08080D", minHeight: "100vh" }}>
+      <Header
+        walletAddress={walletAddress}
+        onConnect={handleDisconnect}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-      {/* Stats bar */}
-      <div className="border-b border-[#1a1a2e] bg-[#0a0a14]">
-        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-8 text-xs text-slate-500">
-          <span>Open orders: <strong className="text-slate-300">{openOrders}</strong></span>
-          <span>Matches executed: <strong className="text-slate-300">{totalMatched}</strong></span>
-          <span>Volume (demo): <strong className="text-slate-300">${totalVolume.toFixed(2)} USDC</strong></span>
-          <span className="ml-auto hidden sm:block">
-            Lacuna circuit: 1,411 constraints · Groth16 · BN254
-          </span>
-        </div>
-      </div>
-
-      {/* Hero banner */}
-      <div className="border-b border-[#1a1a2e] bg-gradient-to-r from-violet-950/30 to-transparent">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-white">
-                Institutional dark pool — zero-knowledge order matching
-              </h2>
-              <p className="text-sm text-slate-400 mt-1 max-w-xl">
-                Submit hidden orders. A permissionless matcher provides a Groth16 ZK proof
-                that two orders are compatible. Stellar verifies the proof on-chain via BN254
-                pairing check. No price or amount is ever revealed.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {["Circom 2.0", "Groth16", "Poseidon", "Soroban", "BN254"].map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main layout */}
-      <main className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: Order submission */}
-        <div className="lg:col-span-1 space-y-5">
-          <OrderForm
-            walletAddress={walletAddress}
-            onOrderSubmitted={handleOrderSubmitted}
-          />
-
-          {/* How it works */}
-          <div className="rounded-xl border border-[#1a1a2e] bg-[#0f0f1a] p-5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-              How it works
-            </h3>
-            <ol className="space-y-3 text-xs text-slate-500">
-              {[
-                ["Commit", "Trader computes Poseidon(price, amount, side, secret) and deposits tokens"],
-                ["Match", "Matcher finds two compatible orders and generates a Groth16 ZK proof"],
-                ["Verify", "Soroban contract verifies the BN254 pairing on-chain — no data revealed"],
-                ["Settle", "Tokens transferred automatically. Order details remain private forever"],
-              ].map(([title, desc]) => (
-                <li key={title} className="flex gap-3">
-                  <span className="text-violet-400 font-mono w-14 flex-shrink-0">{title}</span>
-                  <span>{desc}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-
-        {/* Middle: Order book */}
-        <div className="lg:col-span-1">
+      {activeTab === "book" ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 380px",
+            gap: 16,
+            padding: 16,
+            height: "calc(100vh - 61px)",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Main: order book */}
           <OrderBook
             orders={orders}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
-          />
-        </div>
-
-        {/* Right: Match panel + history */}
-        <div className="lg:col-span-1 space-y-5">
-          <MatchPanel
-            orders={orders}
-            selectedIds={selectedIds}
-            onMatchComplete={handleMatchComplete}
+            onMatchClick={() => setView("match")}
           />
 
-          {/* Match history */}
-          {matchHistory.length > 0 && (
-            <div className="rounded-xl border border-[#1a1a2e] bg-[#0f0f1a] p-5">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-                Match History
-              </h3>
-              <div className="space-y-2">
-                {matchHistory.map((m, i) => (
-                  <div key={i} className="text-xs bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-3 py-2.5">
-                    <div className="flex justify-between text-slate-400">
-                      <span>${(Number(m.settlementPrice) / 1e6).toFixed(6)}</span>
-                      <span>{(Number(m.settlementAmount) / 1e6).toFixed(2)} USDC</span>
-                      <span className="text-emerald-400">ZK ✓</span>
+          {/* Right sidebar */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
+            {/* Order form */}
+            <OrderForm walletAddress={walletAddress} onOrderSubmitted={handleOrderSubmitted} />
+
+            {/* My orders */}
+            <div
+              style={{
+                flex: 1,
+                background: "#0C0C14",
+                border: "1px solid rgba(255,255,255,.07)",
+                borderRadius: 12,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 22px",
+                  borderBottom: "1px solid rgba(255,255,255,.07)",
+                }}
+              >
+                <span style={{ font: "600 15px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>My orders</span>
+                <span style={{ font: "400 11px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>only you see the terms</span>
+              </div>
+
+              <div style={{ padding: "8px 22px 16px", overflowY: "auto", flex: 1 }}>
+                {myOrders.length === 0 ? (
+                  <p style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E", padding: "20px 0" }}>
+                    No orders yet.
+                  </p>
+                ) : (
+                  myOrders.map((o) => (
+                    <div
+                      key={o.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "13px 0",
+                        borderBottom: "1px solid rgba(255,255,255,.05)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span
+                          style={{
+                            font: "600 10px var(--font-mono), monospace",
+                            color: o.side === "BUY" ? "#3ECF8E" : "#F26D78",
+                            background: o.side === "BUY" ? "rgba(62,207,142,.1)" : "rgba(242,109,120,.1)",
+                            padding: "4px 8px",
+                            borderRadius: 5,
+                          }}
+                        >
+                          {o.side}
+                        </span>
+                        <span style={{ font: "500 12.5px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                          {o._price ? (Number(o._price) / 1e6).toFixed(4) : "?"} ×{" "}
+                          {o._amount ? (Number(o._amount) / 1e6).toFixed(0) : "?"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span
+                          style={{
+                            font: "500 10px var(--font-mono), monospace",
+                            color: o.matched ? "#3ECF8E" : o.cancelled ? "#F26D78" : "#9D8CFF",
+                            background: o.matched
+                              ? "rgba(62,207,142,.1)"
+                              : o.cancelled
+                              ? "rgba(242,109,120,.1)"
+                              : "rgba(157,140,255,.12)",
+                            padding: "3px 8px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          {o.matched ? "SETTLED" : o.cancelled ? "CANCELLED" : "OPEN"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="font-mono text-slate-600 mt-1 truncate">
-                      {m.txHash}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
+              </div>
+
+              <div
+                style={{
+                  marginTop: "auto",
+                  padding: "14px 22px",
+                  borderTop: "1px solid rgba(255,255,255,.05)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 48 48">
+                  <mask id="mob-icon">
+                    <rect width="48" height="48" fill="#fff" />
+                    <circle cx="31.5" cy="16.5" r="9.5" fill="#000" />
+                  </mask>
+                  <circle cx="24" cy="24" r="19" fill="#5D5B6E" mask="url(#mob-icon)" />
+                </svg>
+                <span style={{ font: "400 10.5px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+                  The book above shows these same orders as hashes only.
+                </span>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </main>
+      ) : (
+        /* History tab */
+        <div style={{ maxWidth: 1040, margin: "0 auto", padding: 24 }}>
+          <div
+            style={{
+              background: "#0C0C14",
+              border: "1px solid rgba(255,255,255,.07)",
+              borderRadius: 12,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "22px 30px",
+                borderBottom: "1px solid rgba(255,255,255,.07)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-serif), Georgia, serif",
+                  fontSize: 24,
+                  color: "#ECEAF6",
+                }}
+              >
+                Order history
+              </span>
+              <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
+                the same orders, seen from both sides of the proof
+              </span>
+            </div>
 
-      {/* Footer */}
-      <footer className="border-t border-[#1a1a2e] mt-12">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
-          <span>Lacuna · Stellar Hacks: Real-World ZK 2026</span>
-          <span>Groth16 on BN254 · Poseidon · Soroban Protocol 25</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr", alignItems: "stretch" }}>
+              {/* Your view */}
+              <div style={{ padding: "24px 0 24px 30px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#3ECF8E" }} />
+                  <span style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.14em", color: "#ECEAF6" }}>WHAT YOU KNOW</span>
+                  <span style={{ font: "400 10.5px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>— secrets held locally</span>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: ".7fr .9fr .9fr 1fr",
+                    gap: 8,
+                    font: "500 9.5px var(--font-mono), monospace",
+                    letterSpacing: "0.1em",
+                    color: "#5D5B6E",
+                    padding: "0 4px 10px",
+                    borderBottom: "1px solid rgba(255,255,255,.07)",
+                  }}
+                >
+                  <span>SIDE</span><span>PRICE</span><span>AMOUNT</span><span>OUTCOME</span>
+                </div>
+                {myOrders.length === 0 ? (
+                  <p style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E", padding: "20px 4px" }}>
+                    No orders yet.
+                  </p>
+                ) : (
+                  myOrders.map((o) => {
+                    const match = matchHistory.find((m) => m.orderIdA === o.id || m.orderIdB === o.id);
+                    return (
+                      <div
+                        key={o.id}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: ".7fr .9fr .9fr 1fr",
+                          gap: 8,
+                          alignItems: "center",
+                          padding: "14px 4px",
+                          borderBottom: "1px solid rgba(255,255,255,.05)",
+                        }}
+                      >
+                        <span style={{ font: "600 10px var(--font-mono), monospace", color: o.side === "BUY" ? "#3ECF8E" : "#F26D78" }}>
+                          {o.side}
+                        </span>
+                        <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                          {o._price ? (Number(o._price) / 1e6).toFixed(4) : "?"}
+                        </span>
+                        <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                          {o._amount ? (Number(o._amount) / 1e6).toFixed(0) : "?"}
+                        </span>
+                        <span
+                          style={{
+                            font: "500 11px var(--font-mono), monospace",
+                            color: match
+                              ? "#3ECF8E"
+                              : o.cancelled
+                              ? "#5D5B6E"
+                              : "#9D8CFF",
+                          }}
+                        >
+                          {match
+                            ? `filled @ ${(Number(match.settlementPrice) / 1e6).toFixed(4)}`
+                            : o.cancelled
+                            ? "cancelled · refunded"
+                            : "open"}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* ZK boundary */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  borderLeft: "1px dashed rgba(255,255,255,.1)",
+                  borderRight: "1px dashed rgba(255,255,255,.1)",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                  <mask id="zk-div">
+                    <rect width="48" height="48" fill="#fff" />
+                    <circle cx="31.5" cy="16.5" r="9.5" fill="#000" />
+                  </mask>
+                  <circle cx="24" cy="24" r="19" fill="#9D8CFF" mask="url(#zk-div)" />
+                </svg>
+                <span
+                  style={{
+                    font: "500 9px var(--font-mono), monospace",
+                    color: "#5D5B6E",
+                    writingMode: "vertical-rl" as const,
+                    letterSpacing: "0.2em",
+                  }}
+                >
+                  ZK BOUNDARY
+                </span>
+              </div>
+
+              {/* Chain view */}
+              <div style={{ padding: "24px 30px 24px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16, paddingLeft: 24 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#9D8CFF" }} />
+                  <span style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.14em", color: "#ECEAF6" }}>
+                    WHAT THE CHAIN KNOWS
+                  </span>
+                  <span style={{ font: "400 10.5px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>— forever</span>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.3fr .8fr .8fr 1fr",
+                    gap: 8,
+                    font: "500 9.5px var(--font-mono), monospace",
+                    letterSpacing: "0.1em",
+                    color: "#5D5B6E",
+                    padding: "0 4px 10px 28px",
+                    borderBottom: "1px solid rgba(255,255,255,.07)",
+                  }}
+                >
+                  <span>COMMITMENT</span><span>PRICE</span><span>AMOUNT</span><span>STATUS</span>
+                </div>
+                {myOrders.length === 0 ? (
+                  <p style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E", padding: "20px 4px 20px 28px" }}>
+                    No orders yet.
+                  </p>
+                ) : (
+                  myOrders.map((o) => {
+                    const commitHex = "0x" + BigInt(o.commitment).toString(16).padStart(64, "0");
+                    const shortC    = commitHex.slice(0, 6) + "…" + commitHex.slice(-4);
+                    const match     = matchHistory.find((m) => m.orderIdA === o.id || m.orderIdB === o.id);
+                    return (
+                      <div
+                        key={o.id}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1.3fr .8fr .8fr 1fr",
+                          gap: 8,
+                          alignItems: "center",
+                          padding: "14px 4px 14px 28px",
+                          borderBottom: "1px solid rgba(255,255,255,.05)",
+                        }}
+                      >
+                        <span style={{ font: "500 11.5px var(--font-mono), monospace", color: o.cancelled ? "#9B99AF" : "#9D8CFF", textDecoration: o.cancelled ? "line-through" : undefined }}>
+                          {shortC}
+                        </span>
+                        <span>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 38,
+                              height: 10,
+                              borderRadius: 2,
+                              background: "repeating-linear-gradient(45deg, rgba(157,140,255,.3) 0 3px, rgba(157,140,255,.1) 3px 6px)",
+                            }}
+                          />
+                        </span>
+                        <span>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 30,
+                              height: 10,
+                              borderRadius: 2,
+                              background: "repeating-linear-gradient(45deg, rgba(157,140,255,.3) 0 3px, rgba(157,140,255,.1) 3px 6px)",
+                            }}
+                          />
+                        </span>
+                        <span
+                          style={{
+                            font: "500 10px var(--font-mono), monospace",
+                            color: match ? "#3ECF8E" : o.cancelled ? "#F26D78" : "#9D8CFF",
+                          }}
+                        >
+                          {match ? "NULLIFIED" : o.cancelled ? "CANCELLED" : "OPEN"}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "14px 30px",
+                borderTop: "1px solid rgba(255,255,255,.07)",
+                font: "400 11.5px var(--font-archivo), sans-serif",
+                color: "#5D5B6E",
+              }}
+            >
+              Even settled orders never reveal their terms — the fill price on the left is reconstructed from
+              your local secret, not from chain data.
+            </div>
+          </div>
         </div>
-      </footer>
+      )}
     </div>
   );
 }
