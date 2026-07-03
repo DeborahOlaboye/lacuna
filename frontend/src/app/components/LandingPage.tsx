@@ -121,7 +121,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
                 textDecoration: "none",
               }}
             >
-              GitHub
+              github
             </a>
           </div>
           <div
