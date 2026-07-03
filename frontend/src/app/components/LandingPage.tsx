@@ -150,20 +150,41 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 42, repeat: Infinity, ease: "linear" }}
-            style={{ position: "absolute", width: 430, height: 430, border: "1px solid rgba(157,140,255,.10)", borderRadius: "50%" }}
-          />
+            style={{ position: "absolute", width: 430, height: 430, border: "1px solid rgba(157,140,255,.12)", borderRadius: "50%" }}
+          >
+            <div style={{
+              position: "absolute", top: -5, left: "50%", transform: "translateX(-50%)",
+              width: 10, height: 10, borderRadius: "50%",
+              background: "#9D8CFF",
+              boxShadow: "0 0 10px 3px rgba(157,140,255,.7)",
+            }} />
+          </motion.div>
           {/* Mid ring — CCW */}
           <motion.div
             animate={{ rotate: -360 }}
             transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
-            style={{ position: "absolute", width: 330, height: 330, border: "1px solid rgba(157,140,255,.16)", borderRadius: "50%" }}
-          />
+            style={{ position: "absolute", width: 330, height: 330, border: "1px solid rgba(157,140,255,.18)", borderRadius: "50%" }}
+          >
+            <div style={{
+              position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)",
+              width: 8, height: 8, borderRadius: "50%",
+              background: "#C4B8FF",
+              boxShadow: "0 0 8px 2px rgba(196,184,255,.65)",
+            }} />
+          </motion.div>
           {/* Inner ring — faster CW */}
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
-            style={{ position: "absolute", width: 230, height: 230, border: "1px solid rgba(157,140,255,.24)", borderRadius: "50%" }}
-          />
+            style={{ position: "absolute", width: 230, height: 230, border: "1px solid rgba(157,140,255,.26)", borderRadius: "50%" }}
+          >
+            <div style={{
+              position: "absolute", top: -3, left: "50%", transform: "translateX(-50%)",
+              width: 6, height: 6, borderRadius: "50%",
+              background: "#ECEAF6",
+              boxShadow: "0 0 6px 2px rgba(236,234,246,.6)",
+            }} />
+          </motion.div>
 
           {/* Center logo */}
           <motion.div
