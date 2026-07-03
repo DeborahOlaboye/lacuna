@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "./components/Header";
 import LandingPage from "./components/LandingPage";
 import WalletModal from "./components/WalletModal";
@@ -9,6 +9,7 @@ import OrderBook from "./components/OrderBook";
 import MatchPanel from "./components/MatchPanel";
 import type { Order, MatchResult } from "./lib/types";
 import { fetchAllOrders, disconnectWallet } from "./lib/stellar";
+import { loadOrders, saveOrders, mergeOrders } from "./lib/storage";
 
 type View = "landing" | "dashboard" | "match" | "history";
 
@@ -25,28 +26,41 @@ export default function Home() {
     setShowModal(true);
   }
 
-  // On wallet connect, pull existing on-chain orders so the book is populated
+  // Persist orders to localStorage whenever they change (only when connected)
+  useEffect(() => {
+    if (walletAddress && orders.length > 0) {
+      saveOrders(walletAddress, orders);
+    }
+  }, [orders, walletAddress]);
+
+  // On wallet connect:
+  // 1. Load private order data from localStorage immediately (fast, offline)
+  // 2. Fetch current chain state and merge (updates matched/cancelled + adds others' orders)
   async function handleConnected(addr: string) {
     setWalletAddress(addr);
     setShowModal(false);
     setView("dashboard");
+
+    // Restore private orders from local storage right away
+    const local = loadOrders(addr);
+    if (local.length > 0) setOrders(local);
+
+    // Then fetch chain state and merge
     try {
       const chainOrders = await fetchAllOrders(addr);
-      if (chainOrders.length > 0) {
-        const hydrated: Order[] = chainOrders.map((co) => ({
-          id: Date.now() + co.onChainId,
-          onChainId: co.onChainId,
-          side: "BUY",          // side is hidden on-chain; unknown unless it's our order
-          commitment: co.commitment,
-          deposit: co.deposit,
-          trader: co.trader,
-          matched: co.matched,
-          cancelled: co.cancelled,
-        }));
-        setOrders(hydrated);
-      }
+      const chainHydrated: Order[] = chainOrders.map((co) => ({
+        id: Date.now() + co.onChainId,
+        onChainId: co.onChainId,
+        side: "BUY",       // side is hidden on-chain; private field only in localStorage
+        commitment: co.commitment,
+        deposit: co.deposit,
+        trader: co.trader,
+        matched: co.matched,
+        cancelled: co.cancelled,
+      }));
+      setOrders((prev) => mergeOrders(prev.length > 0 ? prev : local, chainHydrated));
     } catch {
-      // Non-fatal: user may have no orders, or demo address has no account
+      // Non-fatal: local orders are already shown; chain fetch can fail silently
     }
   }
 
@@ -73,11 +87,13 @@ export default function Home() {
 
   function handleMatchComplete(result: MatchResult) {
     setMatchHistory((prev) => [result, ...prev]);
-    setOrders((prev) =>
-      prev.map((o) =>
+    setOrders((prev) => {
+      const updated = prev.map((o) =>
         o.id === result.orderIdA || o.id === result.orderIdB ? { ...o, matched: true } : o
-      )
-    );
+      );
+      if (walletAddress) saveOrders(walletAddress, updated);
+      return updated;
+    });
     // stay on match panel to show success
   }
 

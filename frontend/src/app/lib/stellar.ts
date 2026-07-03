@@ -133,23 +133,40 @@ function pubSignalsScVal(signals: string[]): xdr.ScVal {
  */
 async function ensureAccountFunded(address: string): Promise<void> {
   const server = rpc();
+  let accountMissing = false;
   try {
     await server.getAccount(address);
-  } catch {
-    // Account not found — fund via Friendbot
-    const res = await fetch(
-      `https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`
-    );
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      // Friendbot returns 400 if already funded — safe to ignore
-      if (!body.includes("createAccountAlreadyExist") && res.status !== 400) {
-        throw new Error(`Friendbot failed (${res.status}): ${body.slice(0, 120)}`);
-      }
+    return; // account exists — nothing to do
+  } catch (err) {
+    const msg = String(err);
+    // Only call Friendbot for genuine "account not found" — not for network errors.
+    // stellar-sdk throws "Account not found" or includes "404" in the message.
+    if (
+      msg.includes("Account not found") ||
+      msg.includes("accountNotFound") ||
+      msg.includes("404")
+    ) {
+      accountMissing = true;
+    } else {
+      // Network error, RPC down, CORS, etc. — re-throw so the caller surfaces it.
+      throw err;
     }
-    // Wait for the account to land
-    await new Promise((r) => setTimeout(r, 3000));
   }
+
+  if (!accountMissing) return;
+
+  const res = await fetch(
+    `https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    // 400 with createAccountAlreadyExist means it's funded — safe to continue
+    if (!body.includes("createAccountAlreadyExist") && res.status !== 400) {
+      throw new Error(`Friendbot failed (${res.status}): ${body.slice(0, 160)}`);
+    }
+  }
+  // Wait for the ledger to close with the new account
+  await new Promise((r) => setTimeout(r, 4000));
 }
 
 // ── Transaction builder ────────────────────────────────────────────────────────
