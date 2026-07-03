@@ -10,14 +10,58 @@ interface OrderFormProps {
   onOrderSubmitted: (order: Order) => void;
 }
 
+// Submits one order and returns it, shared between the main form and the
+// auto-generated counter-order flow.
+async function doSubmit(
+  walletAddress: string,
+  side: OrderSide,
+  priceScaled: bigint,
+  amountScaled: bigint,
+  secret: bigint
+): Promise<Order> {
+  const sideNum = side === "BUY" ? 0n : 1n;
+  const deposit = side === "BUY"
+    ? priceScaled * amountScaled / 1_000_000n
+    : amountScaled;
+  const comm = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
+  const { hash, onChainId } = await submitOrderOnChain(walletAddress, comm, deposit);
+  return {
+    id: Date.now(),
+    onChainId,
+    side,
+    commitment: comm,
+    deposit,
+    trader: walletAddress,
+    matched: false,
+    cancelled: false,
+    txHash: hash,
+    _price: priceScaled,
+    _amount: amountScaled,
+    _secret: secret,
+  };
+}
+
 export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderFormProps) {
-  const [side, setSide] = useState<OrderSide>("BUY");
-  const [price, setPrice] = useState("");
+  const [side, setSide]     = useState<OrderSide>("BUY");
+  const [price, setPrice]   = useState("");
   const [amount, setAmount] = useState("");
-  const [status, setStatus]   = useState<"idle" | "computing" | "submitting" | "done" | "error">("idle");
-  const [commitment, setCommitment] = useState<string | null>(null);
-  const [txHash, setTxHash]   = useState<string | null>(null);
-  const [errMsg, setErrMsg]   = useState<string | null>(null);
+
+  const [status, setStatus] = useState<"idle" | "computing" | "submitting" | "done" | "error">("idle");
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  // Tracks the last submitted order so we can offer a counter-order
+  const [lastOrder, setLastOrder] = useState<{
+    side: OrderSide;
+    price: bigint;
+    amount: bigint;
+    txHash: string;
+    commitment: string;
+  } | null>(null);
+
+  // Counter-order state
+  const [counterStatus, setCounterStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
+  const [counterErr, setCounterErr]       = useState<string | null>(null);
+
   const [secret] = useState(() => randomSecret());
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,39 +72,52 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
     try {
       const priceScaled  = BigInt(Math.round(parseFloat(price)  * 1_000_000));
       const amountScaled = BigInt(Math.round(parseFloat(amount) * 1_000_000));
-      const sideNum      = side === "BUY" ? 0n : 1n;
-      const deposit      = side === "BUY" ? priceScaled * amountScaled / 1_000_000n : amountScaled;
-      const comm         = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
-      setCommitment(comm);
-
-      setStatus("submitting");
-      // Submit to dark pool contract on Stellar testnet
-      const { hash, onChainId } = await submitOrderOnChain(walletAddress, comm, deposit);
-      setTxHash(hash);
-
-      const order: Order = {
-        id: Date.now(),
-        onChainId,
-        side,
-        commitment: comm,
-        deposit,
-        trader: walletAddress,
-        matched: false,
-        cancelled: false,
-        txHash: hash,
-        _price: priceScaled,
-        _amount: amountScaled,
-        _secret: secret,
-      };
+      const order = await doSubmit(walletAddress, side, priceScaled, amountScaled, secret);
       onOrderSubmitted(order);
+      setLastOrder({
+        side,
+        price:      priceScaled,
+        amount:     amountScaled,
+        txHash:     order.txHash!,
+        commitment: order.commitment,
+      });
       setStatus("done");
-      setTimeout(() => { setStatus("idle"); setTxHash(null); }, 8000);
     } catch (err) {
       console.error(err);
       setErrMsg(err instanceof Error ? err.message : "Transaction failed");
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 8000);
     }
+  }
+
+  async function handleCounterOrder() {
+    if (!walletAddress || !lastOrder) return;
+    setCounterStatus("submitting");
+    setCounterErr(null);
+    try {
+      // Counter-order is the opposite side at the same price → guaranteed fill
+      const counterSide = lastOrder.side === "BUY" ? "SELL" : "BUY";
+      const counterSecret = randomSecret();
+      const order = await doSubmit(
+        walletAddress,
+        counterSide,
+        lastOrder.price,
+        lastOrder.amount,
+        counterSecret
+      );
+      onOrderSubmitted(order);
+      setCounterStatus("done");
+    } catch (err) {
+      setCounterErr(err instanceof Error ? err.message : "Counter-order failed");
+      setCounterStatus("error");
+    }
+  }
+
+  function handleNewOrder() {
+    setStatus("idle");
+    setErrMsg(null);
+    setLastOrder(null);
+    setCounterStatus("idle");
+    setCounterErr(null);
   }
 
   const depositEstimate =
@@ -70,6 +127,241 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
         : parseFloat(amount).toFixed(2)
       : null;
 
+  // ── Post-submission: show flow guide ────────────────────────────────────────
+  if (status === "done" && lastOrder) {
+    const counterSide = lastOrder.side === "BUY" ? "SELL" : "BUY";
+
+    return (
+      <div
+        style={{
+          background: "#0C0C14",
+          border: "1px solid rgba(255,255,255,.07)",
+          borderRadius: 12,
+          padding: "20px 22px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        {/* Order confirmed header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "#3ECF8E",
+              color: "#08080D",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              font: "700 13px var(--font-archivo), sans-serif",
+              flexShrink: 0,
+            }}
+          >
+            ✓
+          </span>
+          <div>
+            <div style={{ font: "600 14px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>
+              {lastOrder.side} order on-chain
+            </div>
+            <div style={{ font: "400 10.5px var(--font-mono), monospace", color: "#5D5B6E", marginTop: 2 }}>
+              TX {lastOrder.txHash.slice(0, 10)}…{lastOrder.txHash.slice(-8)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: "rgba(255,255,255,.07)" }} />
+
+        {/* 3-step progress */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div style={{ font: "600 10px var(--font-mono), monospace", letterSpacing: "0.14em", color: "#5D5B6E", marginBottom: 14 }}>
+            WHAT&apos;S NEXT
+          </div>
+
+          {[
+            {
+              n: "1",
+              label: "Submit hidden order",
+              sub: "Commitment on-chain, terms hidden",
+              done: true,
+              active: false,
+            },
+            {
+              n: "2",
+              label: `Submit a ${counterSide} order`,
+              sub: "Needs a compatible opposite side",
+              done: counterStatus === "done",
+              active: counterStatus === "idle" || counterStatus === "error",
+            },
+            {
+              n: "3",
+              label: "Select both → generate proof",
+              sub: "Pick both orders in the book, then click match",
+              done: false,
+              active: counterStatus === "done",
+            },
+          ].map((step, i, arr) => (
+            <div key={step.n} style={{ display: "flex", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                {step.done ? (
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: "#3ECF8E",
+                      color: "#08080D",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      font: "700 10px var(--font-archivo), sans-serif",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✓
+                  </span>
+                ) : step.active ? (
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: "#9D8CFF",
+                      color: "#08080D",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      font: "700 10px var(--font-archivo), sans-serif",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {step.n}
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      border: "1.5px solid rgba(255,255,255,.15)",
+                      color: "#5D5B6E",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      font: "600 10px var(--font-archivo), sans-serif",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {step.n}
+                  </span>
+                )}
+                {i < arr.length - 1 && (
+                  <span
+                    style={{
+                      width: 1.5,
+                      height: 26,
+                      background: step.done ? "rgba(62,207,142,.4)" : "rgba(255,255,255,.1)",
+                    }}
+                  />
+                )}
+              </div>
+              <div style={{ paddingBottom: 10 }}>
+                <div
+                  style={{
+                    font: "600 12.5px var(--font-archivo), sans-serif",
+                    color: step.done ? "#ECEAF6" : step.active ? "#ECEAF6" : "#5D5B6E",
+                  }}
+                >
+                  {step.label}
+                </div>
+                <div style={{ font: "400 11px var(--font-archivo), sans-serif", color: "#44424F", marginTop: 2 }}>
+                  {step.sub}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Counter-order action */}
+        {counterStatus !== "done" && (
+          <div
+            style={{
+              background: "rgba(157,140,255,.05)",
+              border: "1px solid rgba(157,140,255,.18)",
+              borderRadius: 11,
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div style={{ font: "400 11.5px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
+              For the proof to run, there must be a compatible {counterSide} order in the book.
+              Click below to auto-submit one at the same price — your private data stays local.
+            </div>
+            {counterErr && (
+              <div style={{ font: "400 11px var(--font-archivo), sans-serif", color: "#F26D78" }}>
+                {counterErr}
+              </div>
+            )}
+            <button
+              onClick={handleCounterOrder}
+              disabled={counterStatus === "submitting"}
+              style={{
+                font: "600 13px var(--font-archivo), sans-serif",
+                color: counterStatus === "submitting" ? "#9B99AF" : "#08080D",
+                background: counterStatus === "submitting" ? "rgba(157,140,255,.25)" : "#9D8CFF",
+                padding: "12px 0",
+                borderRadius: 9,
+                border: "none",
+                cursor: counterStatus === "submitting" ? "default" : "pointer",
+                transition: "background .15s",
+              }}
+            >
+              {counterStatus === "submitting"
+                ? "Submitting counter-order…"
+                : counterStatus === "error"
+                ? "Retry counter-order"
+                : `Submit ${counterSide} counter-order →`}
+            </button>
+          </div>
+        )}
+
+        {counterStatus === "done" && (
+          <div
+            style={{
+              background: "rgba(62,207,142,.05)",
+              border: "1px solid rgba(62,207,142,.2)",
+              borderRadius: 11,
+              padding: "12px 16px",
+              font: "400 12px/1.55 var(--font-archivo), sans-serif",
+              color: "#3ECF8E",
+            }}
+          >
+            Both orders are in the book. Go to the order book, select them both, and click <strong style={{ color: "#ECEAF6" }}>Generate proof &amp; match →</strong>
+          </div>
+        )}
+
+        <button
+          onClick={handleNewOrder}
+          style={{
+            font: "500 12.5px var(--font-archivo), sans-serif",
+            color: "#9B99AF",
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,.1)",
+            padding: "11px 0",
+            borderRadius: 9,
+            cursor: "pointer",
+          }}
+        >
+          Submit another order
+        </button>
+      </div>
+    );
+  }
+
+  // ── Normal form ──────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -111,17 +403,10 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
               flex: 1,
               textAlign: "center",
               font: "600 13.5px var(--font-archivo), sans-serif",
-              color:
-                side === s
-                  ? s === "BUY"
-                    ? "#08080D"
-                    : "#08080D"
-                  : "#9B99AF",
+              color: side === s ? "#08080D" : "#9B99AF",
               background:
                 side === s
-                  ? s === "BUY"
-                    ? "#3ECF8E"
-                    : "#F26D78"
+                  ? s === "BUY" ? "#3ECF8E" : "#F26D78"
                   : "transparent",
               borderRadius: 8,
               padding: "11px 0",
@@ -223,7 +508,7 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
           </span>
         </div>
 
-        {/* Commitment preview */}
+        {/* Error */}
         {status === "error" && errMsg && (
           <div
             style={{
@@ -238,37 +523,9 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
             {errMsg}
           </div>
         )}
-        {status === "done" && commitment ? (
-          <div
-            style={{
-              background: "rgba(62,207,142,.05)",
-              border: "1px solid rgba(62,207,142,.25)",
-              borderRadius: 12,
-              padding: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3ECF8E" }} />
-              <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#3ECF8E" }}>
-                ORDER ON-CHAIN
-              </span>
-            </div>
-            <div style={{ font: "500 11px var(--font-mono), monospace", color: "#ECEAF6", wordBreak: "break-all", lineHeight: 1.6 }}>
-              0x{BigInt(commitment).toString(16).padStart(64, "0").slice(0, 32)}…
-            </div>
-            {txHash && (
-              <div style={{ font: "400 10.5px var(--font-mono), monospace", color: "#9B99AF" }}>
-                TX: {txHash.slice(0, 12)}…{txHash.slice(-8)}
-              </div>
-            )}
-            <div style={{ font: "400 11px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
-              Price &amp; amount hidden ✓ Only you hold the secret.
-            </div>
-          </div>
-        ) : status !== "error" ? (
+
+        {/* Commitment preview */}
+        {status !== "error" && (
           <div
             style={{
               background: "rgba(157,140,255,.06)",
@@ -287,15 +544,15 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
               Poseidon(price, amount, side, secret) — computed locally when you submit.
             </span>
           </div>
-        ) : null}
+        )}
 
         <button
           type="submit"
-          disabled={!walletAddress || status === "computing" || status === "submitting" || status === "done"}
+          disabled={!walletAddress || status === "computing" || status === "submitting"}
           style={{
             font: "600 14.5px var(--font-archivo), sans-serif",
             color: "#08080D",
-            background: status === "done" ? "#3ECF8E" : status === "error" ? "rgba(157,140,255,.4)" : "#9D8CFF",
+            background: status === "error" ? "rgba(157,140,255,.5)" : "#9D8CFF",
             padding: "15px 0",
             borderRadius: 11,
             border: "none",
@@ -308,8 +565,6 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
             ? "Computing commitment…"
             : status === "submitting"
             ? "Submitting to Stellar…"
-            : status === "done"
-            ? "Order on-chain ✓"
             : status === "error"
             ? "Retry"
             : walletAddress
