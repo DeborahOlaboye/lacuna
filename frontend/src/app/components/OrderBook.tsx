@@ -189,8 +189,11 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
             const shortCommit  = commitHex.slice(0, 8) + "…" + commitHex.slice(-4);
             const shortTrader  = order.trader.slice(0, 4) + "…" + order.trader.slice(-4);
             const depositXlm   = (Number(order.deposit) / 1_000_000).toFixed(2);
-            const ageMin       = Math.floor((Date.now() - order.id) / 60000);
-            const ageLabel     = ageMin < 1 ? "just now" : ageMin < 60 ? ageMin + "m" : Math.floor(ageMin / 60) + "h";
+            const ageDiff      = Date.now() - order.id;
+            // id values offset by 1_000_000 are placeholders (no relay timestamp)
+            const hasRealAge   = !!(order._price) || ageDiff < 3_600_000 * 24;
+            const ageMin       = Math.floor(ageDiff / 60000);
+            const ageLabel     = !hasRealAge ? "—" : ageMin < 1 ? "just now" : ageMin < 60 ? ageMin + "m" : Math.floor(ageMin / 60) + "h";
 
             return (
               <div

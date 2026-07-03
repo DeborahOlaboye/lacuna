@@ -64,7 +64,8 @@ export default function Home() {
       const chainHydrated: Order[] = chainOrders.map((co) => {
         const priv = relayMap.get(co.commitment);
         return {
-          id:         Date.now() + co.onChainId,
+          // Use relay submittedAt for real age; fall back to a unique but opaque value
+          id:         priv?.submittedAt ?? (Date.now() - 1_000_000 + co.onChainId),
           onChainId:  co.onChainId,
           side:       priv?.side ?? "BUY",
           commitment: co.commitment,

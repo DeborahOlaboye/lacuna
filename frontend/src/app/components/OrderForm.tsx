@@ -27,7 +27,7 @@ async function doSubmit(
   const comm = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
   const { hash, onChainId } = await submitOrderOnChain(walletAddress, comm, deposit);
   // Post encrypted private data to relay so any wallet can match this order
-  postOrderToRelay(comm, { price: priceScaled, amount: amountScaled, side, secret }).catch(() => {});
+  postOrderToRelay(comm, { price: priceScaled, amount: amountScaled, side, secret, submittedAt: Date.now() }).catch(() => {});
   return {
     id: Date.now(),
     onChainId,

@@ -17,19 +17,21 @@ const RELAY_PUBLIC_KEY  = Uint8Array.from(Buffer.from("503ccc071191cc95dc67eef0b
 const RELAY_SECRET_KEY  = Uint8Array.from(Buffer.from("693eb11896a8fb4bf004df75d04bdff543fc014113a7c05eabc7ba2ca16088e4", "hex"));
 
 export interface PrivateOrderData {
-  price:  bigint;
-  amount: bigint;
-  side:   "BUY" | "SELL";
-  secret: bigint;
+  price:       bigint;
+  amount:      bigint;
+  side:        "BUY" | "SELL";
+  secret:      bigint;
+  submittedAt: number; // Unix ms — used for age display in the order book
 }
 
 // Encrypt private order data for relay storage.
 export function encryptOrderData(data: PrivateOrderData): string {
   const msg = new TextEncoder().encode(JSON.stringify({
-    price:  data.price.toString(),
-    amount: data.amount.toString(),
-    side:   data.side,
-    secret: data.secret.toString(),
+    price:       data.price.toString(),
+    amount:      data.amount.toString(),
+    side:        data.side,
+    secret:      data.secret.toString(),
+    submittedAt: data.submittedAt,
   }));
   const ephemeral = nacl.box.keyPair();
   const nonce     = nacl.randomBytes(nacl.box.nonceLength);
@@ -59,10 +61,11 @@ export function decryptOrderData(blob: string): PrivateOrderData | null {
     if (!plain) return null;
     const d = JSON.parse(new TextDecoder().decode(plain));
     return {
-      price:  BigInt(d.price),
-      amount: BigInt(d.amount),
-      side:   d.side as "BUY" | "SELL",
-      secret: BigInt(d.secret),
+      price:       BigInt(d.price),
+      amount:      BigInt(d.amount),
+      side:        d.side as "BUY" | "SELL",
+      secret:      BigInt(d.secret),
+      submittedAt: d.submittedAt ?? Date.now(),
     };
   } catch {
     return null;
