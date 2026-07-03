@@ -186,13 +186,18 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             }} />
           </motion.div>
 
-          {/* Center logo */}
+          {/* Center logo — reveal once, then breathe forever */}
           <motion.div
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.3, ease }}
           >
-            <EclipseMark size={130} id="ln-hero" />
+            <motion.div
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+            >
+              <EclipseMark size={130} id="ln-hero" />
+            </motion.div>
           </motion.div>
 
           {/* Floating commitment badge */}
