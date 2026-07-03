@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Order, OrderSide } from "../lib/types";
 import { computeCommitment, randomSecret } from "../lib/circuit";
 import { submitOrder as submitOrderOnChain } from "../lib/stellar";
+import { postOrderToRelay } from "../lib/relay";
 
 interface OrderFormProps {
   walletAddress: string | null;
@@ -25,6 +26,8 @@ async function doSubmit(
     : amountScaled;
   const comm = await computeCommitment(priceScaled, amountScaled, sideNum, secret);
   const { hash, onChainId } = await submitOrderOnChain(walletAddress, comm, deposit);
+  // Post encrypted private data to relay so any wallet can match this order
+  postOrderToRelay(comm, { price: priceScaled, amount: amountScaled, side, secret }).catch(() => {});
   return {
     id: Date.now(),
     onChainId,

@@ -10,6 +10,7 @@ import MatchPanel from "./components/MatchPanel";
 import type { Order, MatchResult } from "./lib/types";
 import { fetchAllOrders, disconnectWallet } from "./lib/stellar";
 import { loadOrders, saveOrders, mergeOrders } from "./lib/storage";
+import { fetchRelayOrders } from "./lib/relay";
 
 type View = "landing" | "dashboard" | "match" | "history";
 
@@ -56,17 +57,26 @@ export default function Home() {
   async function refreshChainOrders(addr: string, existingLocal?: Order[]) {
     setRefreshing(true);
     try {
-      const chainOrders = await fetchAllOrders(addr);
-      const chainHydrated: Order[] = chainOrders.map((co) => ({
-        id: Date.now() + co.onChainId,
-        onChainId: co.onChainId,
-        side: "BUY",       // side is hidden on-chain; private field only in localStorage
-        commitment: co.commitment,
-        deposit: co.deposit,
-        trader: co.trader,
-        matched: co.matched,
-        cancelled: co.cancelled,
-      }));
+      const [chainOrders, relayMap] = await Promise.all([
+        fetchAllOrders(addr),
+        fetchRelayOrders(),
+      ]);
+      const chainHydrated: Order[] = chainOrders.map((co) => {
+        const priv = relayMap.get(co.commitment);
+        return {
+          id:         Date.now() + co.onChainId,
+          onChainId:  co.onChainId,
+          side:       priv?.side ?? "BUY",
+          commitment: co.commitment,
+          deposit:    co.deposit,
+          trader:     co.trader,
+          matched:    co.matched,
+          cancelled:  co.cancelled,
+          _price:     priv?.price,
+          _amount:    priv?.amount,
+          _secret:    priv?.secret,
+        };
+      });
       const local = existingLocal ?? loadOrders(addr);
       setOrders((prev) => mergeOrders(prev.length > 0 ? prev : local, chainHydrated));
     } catch (err) {
