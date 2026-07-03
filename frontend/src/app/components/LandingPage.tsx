@@ -33,14 +33,21 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           <Wordmark size={15} />
         </div>
         <div style={{ display: "flex", gap: 32, fontWeight: 500, fontSize: 13, color: "#9B99AF" }}>
-          <span style={{ cursor: "pointer" }}>Protocol</span>
           <a
             href="https://github.com/DeborahOlaboye/lacuna"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: "#9B99AF", textDecoration: "none" }}
           >
-            GitHub
+            github
+          </a>
+          <a
+            href="https://github.com/DeborahOlaboye/lacuna"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#9B99AF", textDecoration: "none" }}
+          >
+            Read the protocol
           </a>
         </div>
         <button
