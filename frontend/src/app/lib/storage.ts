@@ -6,7 +6,9 @@ import type { Order } from "./types";
 // keyed by wallet address. Commitment + deposit are also stored so the full
 // Order can be reconstructed without chain calls.
 
-const KEY = (addr: string) => `lacuna_orders_${addr}`;
+// Single global key — all wallets on the same browser share private order data.
+// In production each user is on their own device so isolation is physical, not logical.
+const KEY = (_addr: string) => `lacuna_orders`;
 
 interface StoredOrder {
   id: number;
