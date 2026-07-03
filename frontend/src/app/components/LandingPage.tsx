@@ -32,24 +32,6 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           <EclipseMark size={26} id="ln-nav" />
           <Wordmark size={15} />
         </div>
-        <div style={{ display: "flex", gap: 32, fontWeight: 500, fontSize: 13, color: "#9B99AF" }}>
-          <a
-            href="https://github.com/DeborahOlaboye/lacuna"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#9B99AF", textDecoration: "none" }}
-          >
-            github
-          </a>
-          <a
-            href="https://github.com/DeborahOlaboye/lacuna"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#9B99AF", textDecoration: "none" }}
-          >
-            Read the protocol
-          </a>
-        </div>
         <button
           onClick={onConnect}
           style={{
