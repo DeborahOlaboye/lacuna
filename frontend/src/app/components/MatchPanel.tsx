@@ -207,7 +207,6 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
               ["Settlement price", `${(Number(result.settlementPrice) / 1e6).toFixed(6)} XLM`],
               ["Filled", `${(Number(result.settlementAmount) / 1e6).toFixed(2)} XLM`],
               ["Proof time", `${elapsedSec}s`],
-              ["TX hash", `${result.txHash.slice(0, 10)}…${result.txHash.slice(-8)}`],
               ["Nullifier stored", "✓ orders closed"],
             ].map(([label, value]) => (
               <div
@@ -225,6 +224,29 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
                 </span>
               </div>
             ))}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "13px 18px",
+                borderBottom: "1px solid rgba(255,255,255,.05)",
+              }}
+            >
+              <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#9B99AF" }}>TX hash</span>
+              <a
+                href={`https://stellar.expert/explorer/testnet/tx/${result.txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  font: "500 12px var(--font-mono), monospace",
+                  color: "#9D8CFF",
+                  textDecoration: "none",
+                }}
+              >
+                {result.txHash.slice(0, 10)}…{result.txHash.slice(-8)} ↗
+              </a>
+            </div>
           </div>
         </div>
 
