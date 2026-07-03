@@ -32,6 +32,27 @@ body {
     rgba(157, 140, 255, 0.3) 0 3px,
     rgba(157, 140, 255, 0.1) 3px 6px
   );
+  position: relative;
+  overflow: hidden;
+}
+
+.redact::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(157,140,255,.45) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: redact-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes redact-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.6; }
 }
 
 .redact-sm {

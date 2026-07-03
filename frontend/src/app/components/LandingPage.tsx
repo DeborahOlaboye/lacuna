@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, type TargetAndTransition } from "framer-motion";
+import { motion, type TargetAndTransition, useMotionValue, useTransform, animate } from "framer-motion";
+import { useEffect, useState } from "react";
 import { EclipseMark, Wordmark } from "./Header";
 
 interface LandingPageProps {
@@ -26,9 +27,64 @@ const inView = (delay = 0) => ({
   transition: { duration: 0.65, delay, ease },
 });
 
+// Animated counter
+function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
+  const mv = useMotionValue(0);
+  const rounded = useTransform(mv, (v) => Math.round(v).toLocaleString() + suffix);
+  const [display, setDisplay] = useState("0" + suffix);
+  useEffect(() => {
+    const unsub = rounded.on("change", setDisplay);
+    const ctrl = animate(mv, to, { duration: 1.8, ease: "easeOut" });
+    return () => { ctrl.stop(); unsub(); };
+  }, [mv, rounded, to]);
+  return <span>{display}</span>;
+}
+
+// Typewriter
+function Typewriter({ text, delay = 0 }: { text: string; delay?: number }) {
+  const chars = text.split("");
+  return (
+    <motion.span
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+    >
+      {chars.map((ch, i) => (
+        <motion.span
+          key={i}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { delay: delay + i * 0.035 } },
+          }}
+        >
+          {ch}
+        </motion.span>
+      ))}
+    </motion.span>
+  );
+}
+
+// Dot grid background
+function DotGrid() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage: "radial-gradient(circle, rgba(157,140,255,.18) 1px, transparent 1px)",
+        backgroundSize: "28px 28px",
+        maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)",
+        WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)",
+        animation: "grid-pulse 4s ease-in-out infinite",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
 export default function LandingPage({ onConnect }: LandingPageProps) {
   return (
-    <div style={{ background: "#08080D", minHeight: "100vh", fontFamily: "var(--font-archivo), sans-serif" }}>
+    <div style={{ background: "#08080D", minHeight: "100vh", fontFamily: "var(--font-archivo), sans-serif", overflow: "hidden" }}>
 
       {/* Nav */}
       <motion.nav
@@ -41,6 +97,8 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           justifyContent: "space-between",
           padding: "18px 40px",
           borderBottom: "1px solid rgba(255,255,255,.07)",
+          position: "relative",
+          zIndex: 10,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
@@ -49,7 +107,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
         </div>
         <motion.button
           onClick={onConnect}
-          whileHover={{ scale: 1.05 }}
+          whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(157,140,255,.4)" }}
           whileTap={{ scale: 0.96 }}
           style={{
             font: "600 13px var(--font-archivo), sans-serif",
@@ -68,14 +126,27 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
       {/* Hero */}
       <div
         style={{
+          position: "relative",
           display: "grid",
           gridTemplateColumns: "1.05fr .95fr",
           gap: 24,
           padding: "92px 64px 84px",
-          background: "radial-gradient(900px 520px at 78% 40%, rgba(157,140,255,.09), transparent 65%)",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 26, justifyContent: "center" }}>
+        {/* Animated radial glow */}
+        <motion.div
+          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "radial-gradient(900px 520px at 78% 40%, rgba(157,140,255,.11), transparent 65%)",
+            pointerEvents: "none",
+          }}
+        />
+        <DotGrid />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 26, justifyContent: "center", position: "relative", zIndex: 1 }}>
           <motion.div
             {...fadeUp(0.1)}
             style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.24em", color: "#9D8CFF" }}
@@ -83,8 +154,8 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             ZERO-KNOWLEDGE DARK POOL · STELLAR
           </motion.div>
 
+          {/* Word-by-word h1 */}
           <motion.h1
-            {...fadeUp(0.22)}
             style={{
               fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 62,
@@ -94,12 +165,34 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               margin: 0,
             }}
           >
-            The market can&rsquo;t front-run{" "}
-            <em style={{ color: "#9D8CFF" }}>what it can&rsquo;t see.</em>
+            {"The market can’t front-run ".split(" ").map((word, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 + i * 0.08, ease }}
+                style={{ display: "inline-block", marginRight: "0.28em" }}
+              >
+                {word}
+              </motion.span>
+            ))}
+            <em style={{ color: "#9D8CFF" }}>
+              {"what it can’t see.".split(" ").map((word, i) => (
+                <motion.span
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 + i * 0.09, ease }}
+                  style={{ display: "inline-block", marginRight: "0.28em" }}
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </em>
           </motion.h1>
 
           <motion.p
-            {...fadeUp(0.34)}
+            {...fadeUp(0.7)}
             style={{ font: "400 16.5px/1.68 var(--font-archivo), sans-serif", color: "#9B99AF", maxWidth: 520, margin: 0 }}
           >
             Lacuna is a dark pool for institutional-size orders. You commit a hash,
@@ -107,10 +200,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             it — price and size never touch the chain. Not before, not after.
           </motion.p>
 
-          <motion.div {...fadeUp(0.46)} style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <motion.div {...fadeUp(0.82)} style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <motion.button
               onClick={onConnect}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 24px rgba(157,140,255,.5)" }}
               whileTap={{ scale: 0.96 }}
               style={{
                 font: "600 14.5px var(--font-archivo), sans-serif",
@@ -128,7 +221,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               href="https://github.com/DeborahOlaboye/lacuna"
               target="_blank"
               rel="noopener noreferrer"
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, borderColor: "rgba(255,255,255,.4)" }}
               whileTap={{ scale: 0.96 }}
               style={{
                 font: "600 14.5px var(--font-archivo), sans-serif",
@@ -145,7 +238,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
         </div>
 
         {/* Orbital graphic */}
-        <div style={{ position: "relative", minHeight: 460, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "relative", minHeight: 460, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
           {/* Outer ring — slow CW */}
           <motion.div
             animate={{ rotate: 360 }}
@@ -156,9 +249,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               position: "absolute", top: -5, left: "50%", transform: "translateX(-50%)",
               width: 10, height: 10, borderRadius: "50%",
               background: "#9D8CFF",
-              boxShadow: "0 0 10px 3px rgba(157,140,255,.7)",
+              boxShadow: "0 0 12px 4px rgba(157,140,255,.8)",
             }} />
           </motion.div>
+
           {/* Mid ring — CCW */}
           <motion.div
             animate={{ rotate: -360 }}
@@ -169,9 +263,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)",
               width: 8, height: 8, borderRadius: "50%",
               background: "#C4B8FF",
-              boxShadow: "0 0 8px 2px rgba(196,184,255,.65)",
+              boxShadow: "0 0 10px 3px rgba(196,184,255,.75)",
             }} />
           </motion.div>
+
           {/* Inner ring — faster CW */}
           <motion.div
             animate={{ rotate: 360 }}
@@ -182,7 +277,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               position: "absolute", top: -3, left: "50%", transform: "translateX(-50%)",
               width: 6, height: 6, borderRadius: "50%",
               background: "#ECEAF6",
-              boxShadow: "0 0 6px 2px rgba(236,234,246,.6)",
+              boxShadow: "0 0 8px 3px rgba(236,234,246,.7)",
             }} />
           </motion.div>
 
@@ -210,16 +305,11 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               y:       { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
             }}
             style={{
-              position: "absolute",
-              top: 36,
-              left: 16,
+              position: "absolute", top: 36, left: 16,
               background: "#0E0E17",
               border: "1px solid rgba(255,255,255,.09)",
-              borderRadius: 8,
-              padding: "10px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
+              borderRadius: 8, padding: "10px 14px",
+              display: "flex", flexDirection: "column", gap: 6,
             }}
           >
             <span style={{ font: "500 9.5px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#5D5B6E" }}>COMMITMENT</span>
@@ -236,16 +326,11 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               y:       { duration: 5, repeat: Infinity, ease: "easeInOut" },
             }}
             style={{
-              position: "absolute",
-              bottom: 118,
-              right: 0,
+              position: "absolute", bottom: 118, right: 0,
               background: "#0E0E17",
               border: "1px solid rgba(255,255,255,.09)",
-              borderRadius: 8,
-              padding: "10px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 7,
+              borderRadius: 8, padding: "10px 14px",
+              display: "flex", flexDirection: "column", gap: 7,
             }}
           >
             <span style={{ font: "500 9.5px var(--font-mono), monospace", letterSpacing: "0.12em", color: "#5D5B6E" }}>PRICE · SIZE</span>
@@ -255,22 +340,17 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             </span>
           </motion.div>
 
-          {/* Pairing check badge */}
+          {/* Pairing check badge — typewriter reveal */}
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.95, ease }}
             style={{
-              position: "absolute",
-              bottom: 24,
-              left: 64,
+              position: "absolute", bottom: 24, left: 64,
               background: "#0E0E17",
               border: "1px solid rgba(62,207,142,.25)",
-              borderRadius: 8,
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
+              borderRadius: 8, padding: "10px 14px",
+              display: "flex", alignItems: "center", gap: 8,
             }}
           >
             <motion.span
@@ -278,41 +358,44 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               style={{ width: 6, height: 6, borderRadius: "50%", background: "#3ECF8E", display: "inline-block" }}
             />
-            <span style={{ font: "500 11px var(--font-mono), monospace", color: "#3ECF8E" }}>pairing_check → OK</span>
+            <span style={{ font: "500 11px var(--font-mono), monospace", color: "#3ECF8E" }}>
+              <Typewriter text="pairing_check → OK" delay={1.2} />
+            </span>
           </motion.div>
         </div>
       </div>
 
-      {/* Stats ticker */}
+      {/* Stats ticker — animated counters */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 44,
+          display: "flex", justifyContent: "center", gap: 44,
           padding: "20px 40px",
           borderTop: "1px solid rgba(255,255,255,.07)",
           borderBottom: "1px solid rgba(255,255,255,.07)",
           font: "500 11.5px var(--font-mono), monospace",
-          letterSpacing: "0.14em",
-          color: "#9B99AF",
+          letterSpacing: "0.14em", color: "#9B99AF",
           background: "#0A0A12",
         }}
       >
-        {["1,411 CONSTRAINTS", "GROTH16 / BN254", "POSEIDON NATIVE", "PROTOCOL 25", "PERMISSIONLESS MATCHING"].map(
-          (s, i) => (
-            <motion.span
-              key={s}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.09 }}
-              style={{ display: "flex", alignItems: "center", gap: 44 }}
-            >
-              {i > 0 && <span style={{ color: "#5D5B6E" }}>◆</span>}
-              {s}
-            </motion.span>
-          )
-        )}
+        {[
+          { label: "CONSTRAINTS", to: 1411, suffix: "" },
+          { label: "GROTH16 / BN254", to: null },
+          { label: "POSEIDON NATIVE", to: null },
+          { label: "PROTOCOL 25", to: null },
+          { label: "PERMISSIONLESS", to: null },
+        ].map((item, i) => (
+          <motion.span
+            key={item.label}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: i * 0.09 }}
+            style={{ display: "flex", alignItems: "center", gap: 44 }}
+          >
+            {i > 0 && <span style={{ color: "#5D5B6E" }}>◆</span>}
+            {item.to !== null ? <><Counter to={item.to} /> {item.label}</> : item.label}
+          </motion.span>
+        ))}
       </div>
 
       {/* Three moves */}
@@ -356,18 +439,22 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.6, delay: i * 0.13, ease }}
-              whileHover={{ y: -5, boxShadow: "0 12px 40px rgba(157,140,255,.14)" }}
+              whileHover={{ y: -6, boxShadow: "0 16px 48px rgba(157,140,255,.16)", borderColor: "rgba(157,140,255,.25)" }}
               style={{
                 background: "#0E0E17",
                 border: "1px solid rgba(255,255,255,.08)",
                 borderRadius: 12,
                 padding: "30px 28px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
+                display: "flex", flexDirection: "column", gap: 14,
               }}
             >
-              <div style={{ font: "600 12px var(--font-mono), monospace", color: "#9D8CFF" }}>{card.n}</div>
+              <motion.div
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
+                style={{ font: "600 12px var(--font-mono), monospace", color: "#9D8CFF" }}
+              >
+                {card.n}
+              </motion.div>
               <div style={{ font: "600 20px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>{card.title}</div>
               <div style={{ font: "400 13.5px/1.65 var(--font-archivo), sans-serif", color: "#9B99AF" }}>{card.body}</div>
               <div
@@ -375,12 +462,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
                   font: "500 11px var(--font-mono), monospace",
                   color: "#9D8CFF",
                   background: "rgba(157,140,255,.08)",
-                  borderRadius: 6,
-                  padding: "9px 12px",
-                  marginTop: "auto",
+                  borderRadius: 6, padding: "9px 12px", marginTop: "auto",
                 }}
               >
-                {card.code}
+                <Typewriter text={card.code} delay={0.3 + i * 0.1} />
               </div>
             </motion.div>
           ))}
@@ -407,9 +492,13 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           >
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
               <span style={{ font: "600 13px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>A public order book</span>
-              <span style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#F26D78", border: "1px solid rgba(242,109,120,.3)", padding: "4px 9px", borderRadius: 20 }}>
+              <motion.span
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#F26D78", border: "1px solid rgba(242,109,120,.3)", padding: "4px 9px", borderRadius: 20 }}
+              >
                 FRONT-RUNNABLE
-              </span>
+              </motion.span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#5D5B6E", paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,.07)" }}>
               <span>SIDE</span><span>PRICE</span><span>SIZE</span><span>TRADER</span>
@@ -417,13 +506,20 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             {[
               { side: "BUY", price: "1.0100", size: "300,000", trader: "GDKF…R2LQ", sideColor: "#3ECF8E" },
               { side: "SELL", price: "1.0000", size: "300,000", trader: "GBLX…K3F7", sideColor: "#F26D78" },
-            ].map((row) => (
-              <div key={row.side} style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, font: "500 12.5px var(--font-mono), monospace", color: "#ECEAF6", padding: "13px 0", borderBottom: "1px solid rgba(255,255,255,.05)" }}>
+            ].map((row, i) => (
+              <motion.div
+                key={row.side}
+                initial={{ opacity: 0, x: -10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.15 + i * 0.1 }}
+                style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, font: "500 12.5px var(--font-mono), monospace", color: "#ECEAF6", padding: "13px 0", borderBottom: "1px solid rgba(255,255,255,.05)" }}
+              >
                 <span style={{ color: row.sideColor }}>{row.side}</span>
                 <span>{row.price}</span>
                 <span>{row.size}</span>
                 <span style={{ color: "#9B99AF" }}>{row.trader}</span>
-              </div>
+              </motion.div>
             ))}
             <p style={{ font: "400 12px/1.6 var(--font-archivo), sans-serif", color: "#9B99AF", marginTop: 18 }}>
               Every bot sees your intent the moment you place it — and trades against you before you fill.
@@ -447,13 +543,20 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             <div style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#5D5B6E", paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,.07)" }}>
               <span>SIDE</span><span>PRICE</span><span>SIZE</span><span>COMMITMENT</span>
             </div>
-            {["0x1f4a…c9e2", "0x8c2d…44b1"].map((commitment) => (
-              <div key={commitment} style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, alignItems: "center", padding: "13px 0", borderBottom: "1px solid rgba(255,255,255,.05)" }}>
+            {["0x1f4a…c9e2", "0x8c2d…44b1"].map((commitment, i) => (
+              <motion.div
+                key={commitment}
+                initial={{ opacity: 0, x: 10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.25 + i * 0.1 }}
+                style={{ display: "grid", gridTemplateColumns: ".8fr 1fr 1fr 1.4fr", gap: 8, alignItems: "center", padding: "13px 0", borderBottom: "1px solid rgba(255,255,255,.05)" }}
+              >
                 <RedactBar w={30} />
                 <RedactBar w={46} />
                 <RedactBar w={52} />
                 <span style={{ font: "500 12.5px var(--font-mono), monospace", color: "#9D8CFF" }}>{commitment}</span>
-              </div>
+              </motion.div>
             ))}
             <p style={{ font: "400 12px/1.6 var(--font-archivo), sans-serif", color: "#9B99AF", marginTop: 18 }}>
               Two hashes. One proof. Even the matcher never learns your price — only that the math holds.

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" fill="#08080D" rx="10"/>
+  <mask id="em-icon">
+    <rect width="48" height="48" fill="#fff"/>
+    <circle cx="31.5" cy="16.5" r="9.5" fill="#000"/>
+  </mask>
+  <circle cx="24" cy="24" r="19" fill="#9D8CFF" mask="url(#em-icon)"/>
+</svg>
