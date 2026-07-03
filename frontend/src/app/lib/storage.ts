@@ -29,7 +29,9 @@ export function loadOrders(walletAddress: string): Order[] {
     const raw = localStorage.getItem(KEY(walletAddress));
     if (!raw) return [];
     const stored: StoredOrder[] = JSON.parse(raw);
-    return stored.map((o) => ({
+    // Discard any entries that were saved without private data (past corruption).
+    // Those orders will be re-fetched from chain and shown with ? badge.
+    return stored.filter((o) => o._price !== undefined).map((o) => ({
       id:          o.id,
       onChainId:   o.onChainId,
       side:        o.side as Order["side"],
@@ -51,7 +53,13 @@ export function loadOrders(walletAddress: string): Order[] {
 export function saveOrders(walletAddress: string, orders: Order[]): void {
   if (typeof window === "undefined") return;
   try {
-    const stored: StoredOrder[] = orders.map((o) => ({
+    // Only persist orders that have private data (_price defined).
+    // Chain-loaded orders from other traders have no private data and must
+    // never be saved — doing so would corrupt localStorage and lose all
+    // price/amount/secret fields permanently.
+    const toSave = orders.filter((o) => o._price !== undefined);
+    if (toSave.length === 0) return;
+    const stored: StoredOrder[] = toSave.map((o) => ({
       id:         o.id,
       onChainId:  o.onChainId,
       side:       o.side,
