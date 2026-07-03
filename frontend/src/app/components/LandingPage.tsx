@@ -121,7 +121,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
                 textDecoration: "none",
               }}
             >
-              github
+              GitHub
             </a>
           </div>
           <div
@@ -451,9 +451,6 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <EclipseMark size={20} color="#5D5B6E" id="ln-footer" />
-          <span style={{ font: "500 11px var(--font-mono), monospace", color: "#5D5B6E" }}>
-            HACKATHON PROTOTYPE · UNAUDITED
-          </span>
         </div>
         <div style={{ display: "flex", gap: 24, font: "500 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
           <a
