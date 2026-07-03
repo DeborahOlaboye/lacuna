@@ -7,9 +7,8 @@ dist/
 circuits/*.ptau
 circuits/order_match_0000.zkey
 
-# Keep the final zkey and vk (needed for proof generation)
-!keys/order_match_final.zkey
-!keys/verification_key.json
+frontend/tsconfig.tsbuildinfo
+scripts/test_contracts.js
 
 .darkpool-config.json
 .last-proof.json
