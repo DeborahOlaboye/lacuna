@@ -165,8 +165,17 @@ async function ensureAccountFunded(address: string): Promise<void> {
       throw new Error(`Friendbot failed (${res.status}): ${body.slice(0, 160)}`);
     }
   }
-  // Wait for the ledger to close with the new account
-  await new Promise((r) => setTimeout(r, 4000));
+
+  // Poll until the account is live on-chain (testnet closes every ~5-6s)
+  const srv = rpc();
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      await srv.getAccount(address);
+      return; // confirmed live
+    } catch { /* keep waiting */ }
+  }
+  throw new Error("Account not available after Friendbot funding — try again");
 }
 
 // ── Transaction builder ────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ export default function Home() {
   const [orders, setOrders]                 = useState<Order[]>([]);
   const [selectedIds, setSelectedIds]       = useState<number[]>([]);
   const [matchHistory, setMatchHistory]     = useState<MatchResult[]>([]);
+  const [refreshing, setRefreshing]         = useState(false);
 
   function openWalletModal() {
     setShowModal(true);
@@ -46,6 +47,11 @@ export default function Home() {
     if (local.length > 0) setOrders(local);
 
     // Then fetch chain state and merge
+    await refreshChainOrders(addr, local);
+  }
+
+  async function refreshChainOrders(addr: string, existingLocal?: Order[]) {
+    setRefreshing(true);
     try {
       const chainOrders = await fetchAllOrders(addr);
       const chainHydrated: Order[] = chainOrders.map((co) => ({
@@ -58,9 +64,12 @@ export default function Home() {
         matched: co.matched,
         cancelled: co.cancelled,
       }));
+      const local = existingLocal ?? loadOrders(addr);
       setOrders((prev) => mergeOrders(prev.length > 0 ? prev : local, chainHydrated));
-    } catch {
-      // Non-fatal: local orders are already shown; chain fetch can fail silently
+    } catch (err) {
+      console.error("Chain fetch failed:", err);
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -173,6 +182,8 @@ export default function Home() {
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onMatchClick={() => setView("match")}
+            onRefresh={() => walletAddress && refreshChainOrders(walletAddress)}
+            refreshing={refreshing}
           />
 
           {/* Right sidebar */}

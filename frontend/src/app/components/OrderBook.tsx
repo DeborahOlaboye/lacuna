@@ -7,6 +7,8 @@ interface OrderBookProps {
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onMatchClick: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 function StatusBadge({ order }: { order: Order }) {
@@ -69,7 +71,7 @@ function RedactBar({ w = 44 }: { w?: number }) {
 
 const COL = "52px 1.5fr 1.2fr .9fr .8fr .9fr .6fr .9fr 48px";
 
-export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatchClick }: OrderBookProps) {
+export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatchClick, onRefresh, refreshing }: OrderBookProps) {
   const open    = orders.filter((o) => !o.matched && !o.cancelled);
   const matched = orders.filter((o) => o.matched);
   const cancelled = orders.filter((o) => o.cancelled);
@@ -104,7 +106,25 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
             commitments only — terms never touch the chain
           </span>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={refreshing}
+              style={{
+                font: "500 10.5px var(--font-mono), monospace",
+                color: "#9B99AF",
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,.12)",
+                padding: "5px 10px",
+                borderRadius: 20,
+                cursor: refreshing ? "default" : "pointer",
+                opacity: refreshing ? 0.5 : 1,
+              }}
+            >
+              {refreshing ? "loading…" : "↻ refresh"}
+            </button>
+          )}
           <span style={{ font: "500 10.5px var(--font-mono), monospace", color: "#9D8CFF", background: "rgba(157,140,255,.1)", padding: "5px 10px", borderRadius: 20 }}>
             {open.length} OPEN
           </span>
