@@ -159,20 +159,24 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
           </div>
         ) : (
           orders.map((order, idx) => {
-            const isSelected  = selectedIds.includes(order.id);
-            const isSelectable = !order.matched && !order.cancelled;
-            const orderId     = String(idx + 1).padStart(2, "0");
-            const commitHex   = "0x" + BigInt(order.commitment).toString(16).padStart(64, "0");
-            const shortCommit = commitHex.slice(0, 8) + "…" + commitHex.slice(-4);
-            const shortTrader = order.trader.slice(0, 4) + "…" + order.trader.slice(-4);
-            const depositXlm  = (Number(order.deposit) / 1_000_000).toFixed(2);
-            const ageMin      = Math.floor((Date.now() - order.id) / 60000);
-            const ageLabel    = ageMin < 1 ? "just now" : ageMin + "m";
+            const isSelected   = selectedIds.includes(order.id);
+            const hasPrivate   = !!(order._price && order._amount && order._secret);
+            // Only open orders WITH private data can be selected for matching
+            const isSelectable = !order.matched && !order.cancelled && hasPrivate;
+            const isOpen       = !order.matched && !order.cancelled;
+            const orderId      = String(idx + 1).padStart(2, "0");
+            const commitHex    = "0x" + BigInt(order.commitment).toString(16).padStart(64, "0");
+            const shortCommit  = commitHex.slice(0, 8) + "…" + commitHex.slice(-4);
+            const shortTrader  = order.trader.slice(0, 4) + "…" + order.trader.slice(-4);
+            const depositXlm   = (Number(order.deposit) / 1_000_000).toFixed(2);
+            const ageMin       = Math.floor((Date.now() - order.id) / 60000);
+            const ageLabel     = ageMin < 1 ? "just now" : ageMin < 60 ? ageMin + "m" : Math.floor(ageMin / 60) + "h";
 
             return (
               <div
                 key={order.id}
                 onClick={() => isSelectable && onToggleSelect(order.id)}
+                title={isOpen && !hasPrivate ? "Cannot select — private data (price/secret) not available for this order" : undefined}
                 style={{
                   display: "grid",
                   gridTemplateColumns: COL,
@@ -182,7 +186,7 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
                   height: 47,
                   borderBottom: "1px solid rgba(255,255,255,.04)",
                   cursor: isSelectable ? "pointer" : "default",
-                  opacity: !isSelectable ? 0.6 : 1,
+                  opacity: (order.matched || order.cancelled) ? 0.5 : 1,
                   background: isSelected ? "rgba(157,140,255,.07)" : "transparent",
                   boxShadow: isSelected ? "inset 3px 0 0 #9D8CFF" : "none",
                   transition: "background .15s",
@@ -196,7 +200,7 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
                 <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>{depositXlm}</span>
                 {/* Side — redacted */}
                 <span><RedactBar w={28} /></span>
-                {/* Price — redacted (unless it's your own order, but we show redacted to simulate chain view) */}
+                {/* Price — redacted */}
                 <span><RedactBar w={44} /></span>
                 <span style={{ font: "500 12px var(--font-mono), monospace", color: "#9B99AF" }}>{ageLabel}</span>
                 <span><StatusBadge order={order} /></span>
@@ -217,6 +221,24 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
                       }}
                     >
                       {isSelected ? "✓" : ""}
+                    </span>
+                  ) : isOpen && !hasPrivate ? (
+                    <span
+                      title="Private data unavailable"
+                      style={{
+                        display: "inline-flex",
+                        width: 17,
+                        height: 17,
+                        borderRadius: 5,
+                        background: "rgba(242,109,120,.15)",
+                        border: "1.5px solid rgba(242,109,120,.35)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        font: "700 11px var(--font-archivo), sans-serif",
+                        color: "#F26D78",
+                      }}
+                    >
+                      ?
                     </span>
                   ) : null}
                 </span>

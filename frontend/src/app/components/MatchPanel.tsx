@@ -37,17 +37,36 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
   const buyOrder  = orderA?.side === "BUY" ? orderA : orderB;
   const sellOrder = orderA?.side === "SELL" ? orderA : orderB;
 
+  const missingPrivate =
+    (buyOrder  && (!buyOrder._price  || !buyOrder._amount  || !buyOrder._secret))  ? "buy"
+    : (sellOrder && (!sellOrder._price || !sellOrder._amount || !sellOrder._secret)) ? "sell"
+    : null;
+
   const priceCompatible =
+    !missingPrivate &&
     buyOrder?._price !== undefined &&
     sellOrder?._price !== undefined &&
     buyOrder._price >= sellOrder._price;
 
-  const canSubmit = buyOrder && sellOrder && phase === "idle";
+  const canSubmit = buyOrder && sellOrder && phase === "idle" && !missingPrivate;
 
   async function handleMatch() {
-    if (!canSubmit || !buyOrder || !sellOrder) return;
-    if (!buyOrder._price || !buyOrder._amount || !buyOrder._secret) return;
-    if (!sellOrder._price || !sellOrder._amount || !sellOrder._secret) return;
+    if (!buyOrder || !sellOrder) return;
+    if (!buyOrder._price || !buyOrder._amount || !buyOrder._secret) {
+      setError("Order A is missing private data (price / amount / secret). Only orders submitted in this browser can be proved. Select orders from 'My orders' or re-submit them.");
+      setPhase("error");
+      return;
+    }
+    if (!sellOrder._price || !sellOrder._amount || !sellOrder._secret) {
+      setError("Order B is missing private data (price / amount / secret). Only orders submitted in this browser can be proved. Select orders from 'My orders' or re-submit them.");
+      setPhase("error");
+      return;
+    }
+    if (!priceCompatible) {
+      setError(`Price mismatch: buyer bid (${(Number(buyOrder._price)/1e6).toFixed(4)}) < seller ask (${(Number(sellOrder._price)/1e6).toFixed(4)}). The circuit requires buyer price ≥ seller price.`);
+      setPhase("error");
+      return;
+    }
 
     setError(null);
     setPhase("witness");
@@ -387,8 +406,32 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
             </div>
           </div>
 
-          {/* Price compatibility */}
-          {buyOrder?._price && sellOrder?._price && !priceCompatible && (
+          {/* Missing private data warning */}
+          {missingPrivate && (
+            <div
+              style={{
+                background: "rgba(242,109,120,.07)",
+                border: "1px solid rgba(242,109,120,.3)",
+                borderRadius: 10,
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <div style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#F26D78" }}>
+                PRIVATE DATA MISSING — {missingPrivate.toUpperCase()} ORDER
+              </div>
+              <div style={{ font: "400 11.5px/1.55 var(--font-archivo), sans-serif", color: "#9B99AF" }}>
+                The ZK proof requires price, amount, and secret for <strong style={{ color: "#ECEAF6" }}>both</strong> orders.
+                These fields only exist in your browser — they were never posted on-chain.
+                Select orders from <strong style={{ color: "#ECEAF6" }}>My orders</strong> (ones you submitted this session or are in localStorage).
+              </div>
+            </div>
+          )}
+
+          {/* Price incompatibility warning */}
+          {!missingPrivate && buyOrder?._price && sellOrder?._price && !priceCompatible && (
             <div
               style={{
                 background: "rgba(242,109,120,.07)",
@@ -399,7 +442,7 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
                 color: "#F26D78",
               }}
             >
-              No match — buyer bid below seller ask
+              No match — buyer bid ({(Number(buyOrder._price)/1e6).toFixed(4)}) below seller ask ({(Number(sellOrder._price)/1e6).toFixed(4)})
             </div>
           )}
         </div>
@@ -581,18 +624,17 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
             {phase === "idle" || phase === "error" ? (
               <button
                 onClick={handleMatch}
-                disabled={!canSubmit || !priceCompatible}
                 style={{
                   font: "600 13.5px var(--font-archivo), sans-serif",
                   color: "#08080D",
-                  background: canSubmit && priceCompatible ? "#9D8CFF" : "rgba(157,140,255,.3)",
+                  background: (missingPrivate || !buyOrder || !sellOrder) ? "rgba(242,109,120,.5)" : "#9D8CFF",
                   padding: "12px 24px",
                   borderRadius: 9,
                   border: "none",
-                  cursor: canSubmit && priceCompatible ? "pointer" : "default",
+                  cursor: "pointer",
                 }}
               >
-                {phase === "error" ? "Retry" : "Generate proof & match"}
+                {phase === "error" && !missingPrivate ? "Retry" : missingPrivate ? "Missing private data — see warning" : "Generate proof & match"}
               </button>
             ) : phase !== "success" ? (
               <button
