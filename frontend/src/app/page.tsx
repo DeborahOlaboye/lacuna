@@ -22,6 +22,9 @@ export default function Home() {
   const [selectedIds, setSelectedIds]       = useState<number[]>([]);
   const [matchHistory, setMatchHistory]     = useState<MatchResult[]>([]);
   const [refreshing, setRefreshing]         = useState(false);
+  const [importVal, setImportVal]           = useState("");
+  const [importMsg, setImportMsg]           = useState<{ ok: boolean; text: string } | null>(null);
+  const [copiedId, setCopiedId]             = useState<number | null>(null);
 
   function openWalletModal() {
     setShowModal(true);
@@ -109,6 +112,68 @@ export default function Home() {
   function handleMatchClose() {
     setSelectedIds([]);
     setView("dashboard");
+  }
+
+  function exportOrder(o: Order) {
+    const payload = JSON.stringify({
+      onChainId:  o.onChainId,
+      commitment: o.commitment,
+      side:       o.side,
+      price:      o._price?.toString(),
+      amount:     o._amount?.toString(),
+      secret:     o._secret?.toString(),
+      trader:     o.trader,
+      deposit:    o.deposit.toString(),
+    });
+    const code = "lacuna:" + btoa(payload);
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopiedId(o.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  function importOrder() {
+    try {
+      if (!importVal.startsWith("lacuna:")) throw new Error("Invalid code");
+      const data = JSON.parse(atob(importVal.slice(7)));
+      setOrders((prev) => {
+        // Find existing order by commitment or onChainId and patch private data in
+        const idx = prev.findIndex(
+          (o) => o.commitment === data.commitment || (data.onChainId !== undefined && o.onChainId === data.onChainId)
+        );
+        if (idx === -1) {
+          // Order not yet in book — add it
+          const newOrder: Order = {
+            id:         Date.now(),
+            onChainId:  data.onChainId,
+            side:       data.side,
+            commitment: data.commitment,
+            deposit:    BigInt(data.deposit),
+            trader:     data.trader,
+            matched:    false,
+            cancelled:  false,
+            _price:     BigInt(data.price),
+            _amount:    BigInt(data.amount),
+            _secret:    BigInt(data.secret),
+          };
+          return [...prev, newOrder];
+        }
+        // Patch private data into existing order
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          side:    data.side,
+          _price:  BigInt(data.price),
+          _amount: BigInt(data.amount),
+          _secret: BigInt(data.secret),
+        };
+        return updated;
+      });
+      setImportMsg({ ok: true, text: "Order imported — private data restored." });
+      setImportVal("");
+    } catch {
+      setImportMsg({ ok: false, text: "Invalid code. Paste the full lacuna:… string." });
+    }
+    setTimeout(() => setImportMsg(null), 4000);
   }
 
   // Landing
@@ -229,11 +294,12 @@ export default function Home() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "13px 0",
+                        padding: "11px 0",
                         borderBottom: "1px solid rgba(255,255,255,.05)",
+                        gap: 8,
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                         <span
                           style={{
                             font: "600 10px var(--font-mono), monospace",
@@ -241,16 +307,34 @@ export default function Home() {
                             background: o.side === "BUY" ? "rgba(62,207,142,.1)" : "rgba(242,109,120,.1)",
                             padding: "4px 8px",
                             borderRadius: 5,
+                            flexShrink: 0,
                           }}
                         >
                           {o.side}
                         </span>
-                        <span style={{ font: "500 12.5px var(--font-mono), monospace", color: "#ECEAF6" }}>
+                        <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
                           {o._price ? (Number(o._price) / 1e6).toFixed(4) : "?"} ×{" "}
                           {o._amount ? (Number(o._amount) / 1e6).toFixed(0) : "?"}
                         </span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        {!o.matched && !o.cancelled && o._price && (
+                          <button
+                            onClick={() => exportOrder(o)}
+                            title="Copy shareable private data code — paste to counter-party so they can match"
+                            style={{
+                              font: "500 10px var(--font-mono), monospace",
+                              color: copiedId === o.id ? "#3ECF8E" : "#9B99AF",
+                              background: "transparent",
+                              border: "1px solid rgba(255,255,255,.1)",
+                              padding: "3px 8px",
+                              borderRadius: 5,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {copiedId === o.id ? "copied!" : "share"}
+                          </button>
+                        )}
                         <span
                           style={{
                             font: "500 10px var(--font-mono), monospace",
@@ -272,9 +356,54 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Import counter-party order */}
+              <div style={{ padding: "12px 22px", borderTop: "1px solid rgba(255,255,255,.07)" }}>
+                <div style={{ font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#5D5B6E", marginBottom: 8 }}>
+                  IMPORT COUNTER-PARTY ORDER
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    value={importVal}
+                    onChange={(e) => setImportVal(e.target.value)}
+                    placeholder="Paste lacuna:… code"
+                    style={{
+                      flex: 1,
+                      font: "400 11px var(--font-mono), monospace",
+                      background: "#0A0A12",
+                      border: "1px solid rgba(255,255,255,.1)",
+                      borderRadius: 6,
+                      padding: "7px 10px",
+                      color: "#ECEAF6",
+                      outline: "none",
+                      minWidth: 0,
+                    }}
+                  />
+                  <button
+                    onClick={importOrder}
+                    disabled={!importVal.trim()}
+                    style={{
+                      font: "600 11px var(--font-archivo), sans-serif",
+                      color: "#08080D",
+                      background: importVal.trim() ? "#9D8CFF" : "rgba(255,255,255,.08)",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "7px 12px",
+                      cursor: importVal.trim() ? "pointer" : "default",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Import
+                  </button>
+                </div>
+                {importMsg && (
+                  <div style={{ font: "400 11px var(--font-archivo), sans-serif", color: importMsg.ok ? "#3ECF8E" : "#F26D78", marginTop: 6 }}>
+                    {importMsg.text}
+                  </div>
+                )}
+              </div>
+
               <div
                 style={{
-                  marginTop: "auto",
                   padding: "14px 22px",
                   borderTop: "1px solid rgba(255,255,255,.05)",
                   display: "flex",
