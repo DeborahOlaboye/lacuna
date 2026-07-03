@@ -141,7 +141,7 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
       >
         <div
           style={{
-            padding: "44px 40px 36px",
+            padding: "clamp(28px,6vw,44px) clamp(20px,6vw,40px) 36px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -187,7 +187,7 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
           </p>
         </div>
 
-        <div style={{ padding: "0 40px 8px" }}>
+        <div style={{ padding: "0 clamp(20px,6vw,40px) 8px" }}>
           <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 12, overflow: "hidden" }}>
             <div
               style={{
@@ -250,7 +250,7 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 12, padding: "20px 40px 22px" }}>
+        <div style={{ display: "flex", gap: 12, padding: "20px clamp(20px,6vw,40px) 22px", flexWrap: "wrap" }}>
           <button
             onClick={onClose}
             style={{
@@ -269,7 +269,7 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
           </button>
         </div>
 
-        <p style={{ textAlign: "center", font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#44424F", padding: "0 40px 24px" }}>
+        <p style={{ textAlign: "center", font: "500 10px var(--font-mono), monospace", letterSpacing: "0.1em", color: "#44424F", padding: "0 clamp(20px,6vw,40px) 24px" }}>
           ON-CHAIN FOOTPRINT: 2 COMMITMENTS · 1 PROOF · 2 TRANSFERS · NOTHING ELSE
         </p>
       </div>
@@ -292,11 +292,13 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
+          rowGap: 10,
           padding: "20px 28px",
           borderBottom: "1px solid rgba(255,255,255,.07)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap", rowGap: 4 }}>
           <span style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 24, color: "#ECEAF6" }}>Match &amp; prove</span>
           {buyOrder && sellOrder && (
             <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
@@ -319,12 +321,12 @@ export default function MatchPanel({ orders, selectedIds, walletAddress, onMatch
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "400px 1fr" }}>
+      <div className="lac-match-grid">
         {/* Left: order cards + circuit checks */}
         <div
+          className="lac-match-left"
           style={{
             padding: "26px 28px",
-            borderRight: "1px solid rgba(255,255,255,.07)",
             display: "flex",
             flexDirection: "column",
             gap: 16,

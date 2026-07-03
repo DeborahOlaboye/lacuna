@@ -67,7 +67,7 @@ export default function Home() {
           // Use relay submittedAt for real age; fall back to a unique but opaque value
           id:         priv?.submittedAt ?? (Date.now() - 1_000_000 + co.onChainId),
           onChainId:  co.onChainId,
-          side:       priv?.side ?? "BUY",
+          side:       priv?.side ?? "UNKNOWN",
           commitment: co.commitment,
           deposit:    co.deposit,
           trader:     co.trader,
@@ -212,7 +212,7 @@ export default function Home() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(12px,4vw,24px)" }}>
           {buy && sell ? (
             <MatchPanel
               orders={orders}
@@ -242,16 +242,7 @@ export default function Home() {
       />
 
       {activeTab === "book" ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 380px",
-            gap: 16,
-            padding: 16,
-            height: "calc(100vh - 61px)",
-            boxSizing: "border-box",
-          }}
-        >
+        <div className="lac-dashboard-grid">
           {/* Main: order book */}
           <OrderBook
             orders={orders}
@@ -305,6 +296,8 @@ export default function Home() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        rowGap: 6,
                         padding: "11px 0",
                         borderBottom: "1px solid rgba(255,255,255,.05)",
                         gap: 8,
@@ -314,14 +307,14 @@ export default function Home() {
                         <span
                           style={{
                             font: "600 10px var(--font-mono), monospace",
-                            color: o.side === "BUY" ? "#3ECF8E" : "#F26D78",
-                            background: o.side === "BUY" ? "rgba(62,207,142,.1)" : "rgba(242,109,120,.1)",
+                            color: o.side === "BUY" ? "#3ECF8E" : o.side === "SELL" ? "#F26D78" : "#5D5B6E",
+                            background: o.side === "BUY" ? "rgba(62,207,142,.1)" : o.side === "SELL" ? "rgba(242,109,120,.1)" : "rgba(255,255,255,.06)",
                             padding: "4px 8px",
                             borderRadius: 5,
                             flexShrink: 0,
                           }}
                         >
-                          {o.side}
+                          {o.side === "UNKNOWN" ? "?" : o.side}
                         </span>
                         <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
                           {o._price ? (Number(o._price) / 1e6).toFixed(4) : "?"} ×{" "}
@@ -438,7 +431,7 @@ export default function Home() {
         </div>
       ) : (
         /* History tab */
-        <div style={{ maxWidth: 1040, margin: "0 auto", padding: 24 }}>
+        <div style={{ maxWidth: 1040, margin: "0 auto", padding: "clamp(12px,4vw,24px)" }}>
           <div
             style={{
               background: "#0C0C14",
@@ -452,7 +445,9 @@ export default function Home() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "22px 30px",
+                flexWrap: "wrap",
+                rowGap: 8,
+                padding: "22px clamp(16px,4vw,30px)",
                 borderBottom: "1px solid rgba(255,255,255,.07)",
               }}
             >
@@ -470,9 +465,9 @@ export default function Home() {
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr", alignItems: "stretch" }}>
+            <div className="lac-history-grid">
               {/* Your view */}
-              <div style={{ padding: "24px 0 24px 30px" }}>
+              <div style={{ padding: "24px clamp(16px,4vw,30px) 24px clamp(16px,4vw,30px)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#3ECF8E" }} />
                   <span style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.14em", color: "#ECEAF6" }}>WHAT YOU KNOW</span>
@@ -511,8 +506,8 @@ export default function Home() {
                           borderBottom: "1px solid rgba(255,255,255,.05)",
                         }}
                       >
-                        <span style={{ font: "600 10px var(--font-mono), monospace", color: o.side === "BUY" ? "#3ECF8E" : "#F26D78" }}>
-                          {o.side}
+                        <span style={{ font: "600 10px var(--font-mono), monospace", color: o.side === "BUY" ? "#3ECF8E" : o.side === "SELL" ? "#F26D78" : "#5D5B6E" }}>
+                          {o.side === "UNKNOWN" ? "?" : o.side}
                         </span>
                         <span style={{ font: "500 12px var(--font-mono), monospace", color: "#ECEAF6" }}>
                           {o._price ? (Number(o._price) / 1e6).toFixed(4) : "?"}
@@ -544,6 +539,7 @@ export default function Home() {
 
               {/* ZK boundary */}
               <div
+                className="lac-history-divider"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -574,7 +570,7 @@ export default function Home() {
               </div>
 
               {/* Chain view */}
-              <div style={{ padding: "24px 30px 24px 0" }}>
+              <div className="lac-history-side-right" style={{ padding: "24px clamp(16px,4vw,30px) 24px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16, paddingLeft: 24 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#9D8CFF" }} />
                   <span style={{ font: "600 11px var(--font-mono), monospace", letterSpacing: "0.14em", color: "#ECEAF6" }}>

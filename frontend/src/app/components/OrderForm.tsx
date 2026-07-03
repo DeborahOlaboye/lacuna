@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Order, OrderSide } from "../lib/types";
+import type { Order } from "../lib/types";
 import { computeCommitment, randomSecret } from "../lib/circuit";
 import { submitOrder as submitOrderOnChain } from "../lib/stellar";
 import { postOrderToRelay } from "../lib/relay";
@@ -15,7 +15,7 @@ interface OrderFormProps {
 // auto-generated counter-order flow.
 async function doSubmit(
   walletAddress: string,
-  side: OrderSide,
+  side: "BUY" | "SELL",
   priceScaled: bigint,
   amountScaled: bigint,
   secret: bigint
@@ -45,7 +45,7 @@ async function doSubmit(
 }
 
 export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderFormProps) {
-  const [side, setSide]     = useState<OrderSide>("BUY");
+  const [side, setSide]     = useState<"BUY" | "SELL">("BUY");
   const [price, setPrice]   = useState("");
   const [amount, setAmount] = useState("");
 
@@ -54,7 +54,7 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
 
   // Tracks the last submitted order so we can offer a counter-order
   const [lastOrder, setLastOrder] = useState<{
-    side: OrderSide;
+    side: "BUY" | "SELL";
     price: bigint;
     amount: bigint;
     txHash: string;
@@ -398,7 +398,7 @@ export default function OrderForm({ walletAddress, onOrderSubmitted }: OrderForm
 
       {/* Side toggle */}
       <div style={{ display: "flex", background: "#12121D", borderRadius: 10, padding: 3 }}>
-        {(["BUY", "SELL"] as OrderSide[]).map((s) => (
+        {(["BUY", "SELL"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setSide(s)}

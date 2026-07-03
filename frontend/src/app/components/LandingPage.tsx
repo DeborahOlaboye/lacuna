@@ -95,7 +95,9 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "18px 40px",
+          flexWrap: "wrap",
+          rowGap: 10,
+          padding: "18px clamp(16px,5vw,40px)",
           borderBottom: "1px solid rgba(255,255,255,.07)",
           position: "relative",
           zIndex: 10,
@@ -125,12 +127,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
 
       {/* Hero */}
       <div
+        className="lac-hero-grid"
         style={{
           position: "relative",
-          display: "grid",
-          gridTemplateColumns: "1.05fr .95fr",
-          gap: 24,
-          padding: "92px 64px 84px",
+          padding: "clamp(48px,10vw,92px) clamp(20px,6vw,64px) clamp(40px,8vw,84px)",
         }}
       >
         {/* Animated radial glow */}
@@ -158,9 +158,9 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
           <motion.h1
             style={{
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontSize: 62,
+              fontSize: "clamp(34px, 7vw, 62px)",
               fontWeight: 400,
-              lineHeight: 1.04,
+              lineHeight: 1.06,
               color: "#ECEAF6",
               margin: 0,
             }}
@@ -193,14 +193,14 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
 
           <motion.p
             {...fadeUp(0.7)}
-            style={{ font: "400 16.5px/1.68 var(--font-archivo), sans-serif", color: "#9B99AF", maxWidth: 520, margin: 0 }}
+            style={{ font: "400 16.5px/1.68 var(--font-archivo), sans-serif", color: "#9B99AF", maxWidth: 520, margin: 0, width: "100%" }}
           >
             Lacuna is a dark pool for institutional-size orders. You commit a hash,
             a permissionless matcher proves your match is valid, and Soroban settles
             it — price and size never touch the chain. Not before, not after.
           </motion.p>
 
-          <motion.div {...fadeUp(0.82)} style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <motion.div {...fadeUp(0.82)} style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <motion.button
               onClick={onConnect}
               whileHover={{ scale: 1.05, boxShadow: "0 0 24px rgba(157,140,255,.5)" }}
@@ -238,7 +238,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
         </div>
 
         {/* Orbital graphic */}
-        <div style={{ position: "relative", minHeight: 460, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+        <div className="lac-orbital" style={{ position: "relative", minHeight: "clamp(300px, 60vw, 460px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
           {/* Outer ring — slow CW */}
           <motion.div
             animate={{ rotate: 360 }}
@@ -368,8 +368,8 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
       {/* Stats ticker — animated counters */}
       <div
         style={{
-          display: "flex", justifyContent: "center", gap: 44,
-          padding: "20px 40px",
+          display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px clamp(20px,5vw,44px)",
+          padding: "20px clamp(16px,5vw,40px)",
           borderTop: "1px solid rgba(255,255,255,.07)",
           borderBottom: "1px solid rgba(255,255,255,.07)",
           font: "500 11.5px var(--font-mono), monospace",
@@ -390,7 +390,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: i * 0.09 }}
-            style={{ display: "flex", alignItems: "center", gap: 44 }}
+            style={{ display: "flex", alignItems: "center", gap: "clamp(20px,5vw,44px)", flexWrap: "wrap" }}
           >
             {i > 0 && <span style={{ color: "#5D5B6E" }}>◆</span>}
             {item.to !== null ? <><Counter to={item.to} /> {item.label}</> : item.label}
@@ -399,10 +399,10 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
       </div>
 
       {/* Three moves */}
-      <div style={{ padding: "84px 64px 76px" }}>
+      <div style={{ padding: "clamp(48px,9vw,84px) clamp(20px,6vw,64px) clamp(40px,8vw,76px)" }}>
         <motion.h2
           {...inView(0)}
-          style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 42, fontWeight: 400, lineHeight: 1.1, color: "#ECEAF6", marginBottom: 12 }}
+          style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "clamp(28px,5vw,42px)", fontWeight: 400, lineHeight: 1.1, color: "#ECEAF6", marginBottom: 12 }}
         >
           Three moves. Zero disclosure.
         </motion.h2>
@@ -412,7 +412,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
         >
           Every step is verifiable on-chain. No step reveals what you traded.
         </motion.p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        <div className="lac-three-grid">
           {[
             {
               n: "01",
@@ -473,14 +473,14 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
       </div>
 
       {/* Chain comparison */}
-      <div style={{ padding: "0 64px 88px" }}>
+      <div style={{ padding: "0 clamp(20px,6vw,64px) clamp(48px,9vw,88px)" }}>
         <motion.h2
           {...inView(0)}
-          style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: 42, fontWeight: 400, lineHeight: 1.1, color: "#ECEAF6", marginBottom: 44 }}
+          style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "clamp(28px,5vw,42px)", fontWeight: 400, lineHeight: 1.1, color: "#ECEAF6", marginBottom: 44 }}
         >
           What the chain sees.
         </motion.h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div className="lac-two-grid">
 
           {/* Public order book */}
           <motion.div
@@ -571,7 +571,7 @@ export default function LandingPage({ onConnect }: LandingPageProps) {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "26px 40px", borderTop: "1px solid rgba(255,255,255,.07)" }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", rowGap: 14, padding: "26px clamp(16px,5vw,40px)", borderTop: "1px solid rgba(255,255,255,.07)" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <EclipseMark size={20} color="#5D5B6E" id="ln-footer" />

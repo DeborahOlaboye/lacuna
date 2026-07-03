@@ -96,17 +96,19 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
+          rowGap: 10,
           padding: "18px 22px",
           borderBottom: "1px solid rgba(255,255,255,.07)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", rowGap: 4 }}>
           <span style={{ font: "600 15px var(--font-archivo), sans-serif", color: "#ECEAF6" }}>Order book</span>
           <span style={{ font: "400 12px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
             commitments only — terms never touch the chain
           </span>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", rowGap: 8 }}>
           {onRefresh && (
             <button
               onClick={onRefresh}
@@ -141,36 +143,38 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
         </div>
       </div>
 
-      {/* Column headers */}
-      {orders.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: COL,
-            gap: 8,
-            alignItems: "center",
-            padding: "12px 22px",
-            font: "500 10px var(--font-mono), monospace",
-            letterSpacing: "0.12em",
-            color: "#5D5B6E",
-            borderBottom: "1px solid rgba(255,255,255,.07)",
-          }}
-        >
-          <span>ID</span>
-          <span>COMMITMENT</span>
-          <span>TRADER</span>
-          <span>DEPOSIT</span>
-          <span style={{ color: "#9D8CFF" }}>SIDE·ZK</span>
-          <span style={{ color: "#9D8CFF" }}>PRICE·ZK</span>
-          <span>AGE</span>
-          <span>STATUS</span>
-          <span>SEL</span>
-        </div>
-      )}
+      {/* Scrollable table: column headers + rows share one horizontally-scrolling region */}
+      <div className="lac-orderbook-scroll" style={{ flex: 1, overflowY: "auto" }}>
+        <div className="lac-orderbook-inner">
+          {/* Column headers */}
+          {orders.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: COL,
+                gap: 8,
+                alignItems: "center",
+                padding: "12px 22px",
+                font: "500 10px var(--font-mono), monospace",
+                letterSpacing: "0.12em",
+                color: "#5D5B6E",
+                borderBottom: "1px solid rgba(255,255,255,.07)",
+              }}
+            >
+              <span>ID</span>
+              <span>COMMITMENT</span>
+              <span>TRADER</span>
+              <span>DEPOSIT</span>
+              <span style={{ color: "#9D8CFF" }}>SIDE·ZK</span>
+              <span style={{ color: "#9D8CFF" }}>PRICE·ZK</span>
+              <span>AGE</span>
+              <span>STATUS</span>
+              <span>SEL</span>
+            </div>
+          )}
 
-      {/* Rows */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {orders.length === 0 ? (
+          {/* Rows */}
+          {orders.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 240, gap: 12 }}>
             <span style={{ font: "400 36px var(--font-serif), Georgia, serif", color: "#5D5B6E" }}>—</span>
             <p style={{ font: "400 13px var(--font-archivo), sans-serif", color: "#5D5B6E" }}>
@@ -269,6 +273,7 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
             );
           })
         )}
+        </div>
       </div>
 
       {/* Action bar */}
@@ -277,6 +282,8 @@ export default function OrderBook({ orders, selectedIds, onToggleSelect, onMatch
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
+          rowGap: 10,
           padding: "14px 22px",
           borderTop: canMatch
             ? "1px solid rgba(157,140,255,.25)"

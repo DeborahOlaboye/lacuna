@@ -43,11 +43,13 @@ export default function WalletModal({ onConnect, onClose }: WalletModalProps) {
     >
       <div
         style={{
-          width: 420,
+          width: "min(420px, 92vw)",
+          maxHeight: "90vh",
+          overflowY: "auto",
           background: "#0E0E17",
           border: "1px solid rgba(255,255,255,.12)",
           borderRadius: 16,
-          padding: 36,
+          padding: "clamp(22px,6vw,36px)",
           boxShadow: "0 30px 80px rgba(0,0,0,.7)",
           display: "flex",
           flexDirection: "column",

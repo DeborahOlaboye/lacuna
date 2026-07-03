@@ -43,17 +43,9 @@ export default function Header({ walletAddress, onConnect, activeTab = "book", o
         background: "#08080D",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 24px",
-          height: 60,
-        }}
-      >
+      <div className="lac-header-inner">
         {/* Left: logo + pair selector + tabs */}
-        <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
+        <div className="lac-header-left">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <EclipseMark size={24} id="hdr-main" />
             <Wordmark size={14} />
@@ -62,6 +54,7 @@ export default function Header({ walletAddress, onConnect, activeTab = "book", o
           {walletAddress && (
             <>
               <div
+                className="lac-hide-xs"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -88,8 +81,7 @@ export default function Header({ walletAddress, onConnect, activeTab = "book", o
                       background: "none",
                       border: "none",
                       borderBottom: activeTab === tab ? "2px solid #9D8CFF" : "2px solid transparent",
-                      paddingBottom: 19,
-                      marginBottom: -21,
+                      paddingBottom: 8,
                       cursor: "pointer",
                       textTransform: "capitalize" as const,
                     }}

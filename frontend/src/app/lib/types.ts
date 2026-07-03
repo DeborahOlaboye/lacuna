@@ -1,4 +1,4 @@
-export type OrderSide = "BUY" | "SELL";
+export type OrderSide = "BUY" | "SELL" | "UNKNOWN";
 
 export interface Order {
   id: number;               // local timestamp-based ID

@@ -62,3 +62,180 @@ body {
 .eclipse-mark {
   flex-shrink: 0;
 }
+
+/* ── Responsive layout helpers ──────────────────────────────────────────── */
+
+html {
+  overflow-x: hidden;
+}
+
+/* Dashboard: order book + sidebar */
+.lac-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+  padding: 16px;
+  height: calc(100vh - 61px);
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .lac-dashboard-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 61px);
+  }
+}
+
+/* Order book: table scrolls horizontally instead of crushing columns */
+.lac-orderbook-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lac-orderbook-inner {
+  min-width: 720px;
+}
+
+@media (max-width: 700px) {
+  .lac-orderbook-inner {
+    min-width: 620px;
+  }
+}
+
+/* Match panel: order cards + pipeline steps */
+.lac-match-grid {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+}
+
+.lac-match-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+@media (max-width: 820px) {
+  .lac-match-grid {
+    grid-template-columns: 1fr;
+  }
+  .lac-match-left {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+}
+
+/* History tab: your view / ZK boundary / chain view */
+.lac-history-grid {
+  display: grid;
+  grid-template-columns: 1fr 44px 1fr;
+  align-items: stretch;
+}
+
+@media (max-width: 760px) {
+  .lac-history-grid {
+    grid-template-columns: 1fr;
+  }
+  .lac-history-divider {
+    flex-direction: row !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    padding: 10px 0 !important;
+  }
+  .lac-history-divider span[style*="writing-mode"] {
+    writing-mode: horizontal-tb !important;
+  }
+  .lac-history-side-right {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .lac-history-side-right > div {
+    padding-left: 0 !important;
+  }
+}
+
+/* Landing hero */
+.lac-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .lac-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lac-orbital {
+  transform-origin: center;
+}
+
+@media (max-width: 640px) {
+  .lac-orbital {
+    transform: scale(0.72);
+  }
+}
+
+@media (max-width: 420px) {
+  .lac-orbital {
+    transform: scale(0.58);
+  }
+}
+
+/* Three moves / feature cards */
+.lac-three-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .lac-three-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .lac-three-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Chain comparison */
+.lac-two-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 760px) {
+  .lac-two-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Header */
+.lac-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  padding: 10px clamp(14px, 4vw, 24px);
+  min-height: 60px;
+}
+
+.lac-header-left {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 3vw, 26px);
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .lac-hide-xs {
+    display: none !important;
+  }
+}
